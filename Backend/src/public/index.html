@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réseau Social - Chez Nous</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Tous les styles CSS ont été déplacés dans style.css pour une meilleure organisation -->
+    
+     <!-- Scripts externes -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="script.js" defer></script>
+    
+    <!-- Configuration debug pour désactiver erreurs DevTools -->
+    <script src="debug-config.js"></script>
+    
+    <!-- Scripts modulaires -->
+    <script src="modules/navigation.js" defer></script>
+    <script src="modules/profil.js" defer></script>
+    <script src="modules/messages.js" defer></script>
+    <script src="modules/amis.js" defer></script>
+    <script src="modules/chat.js" defer></script>
+    <script src="modules/historique.js" defer></script>
+    <!-- <script src="modules/forms-manager.js" defer></script> --> <!-- Désactivé pour éviter conflit avec AuthManager -->
+    <script src="modules/app-init.js" defer></script>
+    
+    <!-- Test immédiat du chargement des modules -->
+    <script>
+        // Désactiver React DevTools pour éviter les erreurs minifiées
+        if (typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ === 'object') {
+            window.__REACT_DEVTOOLS_GLOBAL_HOOK__.onCommitFiberRoot = null;
+            window.__REACT_DEVTOOLS_GLOBAL_HOOK__.onCommitFiberUnmount = null;
+            console.log('🚫 React DevTools désactivé pour éviter les erreurs');
+        }
+        
+        // Capturer toutes les erreurs JavaScript
+        window.addEventListener('error', function(e) {
+            // Ignorer les erreurs des DevTools React minifiés
+            if (e.filename && e.filename.includes('inspector') && e.filename.includes('.js')) {
+                console.warn('⚠️ ERREUR DEVTOOLS IGNOREE (React minifié):', e.message);
+                return true; // Empêcher l'affichage de l'erreur
+            }
+            
+            console.error('🚨 ERREUR JAVASCRIPT DETECTEE:', {
+                message: e.message,
+                filename: e.filename,
+                lineno: e.lineno,
+                colno: e.colno,
+                error: e.error
+            });
+        });
+        
+        // Fonction de secours pour charger la liste d'amis
+        function chargerListeAmisSecours() {
+            console.log("🔄 [SECOURS] Tentative de chargement liste amis");
+            
+            if (window.ChatModule && window.ChatModule.chargerListeAmis) {
+                console.log("✅ [SECOURS] ChatModule trouvé, utilisation de la fonction officielle");
+                window.ChatModule.chargerListeAmis();
+            } else {
+                console.log("⚠️ [SECOURS] ChatModule non disponible, chargement manuel");
+                
+                // Chargement manuel en tant que secours
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (!user._id) {
+                    alert('Veuillez vous connecter pour voir vos amis');
+                    return;
+                }
+                
+                const container = document.getElementById('chatAmisListe');
+                if (container) {
+                    container.innerHTML = '<p style="text-align: center; color: #1565c0;">⏳ Chargement...</p>';
+                    
+                    fetch(`http://localhost:5000/friends/amis?userId=${user._id}`)
+                        .then(response => response.json())
+                        .then(amis => {
+                            if (amis.length === 0) {
+                                container.innerHTML = '<p style="text-align: center; color: #6c757d;">Aucun ami confirmé</p>';
+                            } else {
+                                let html = '';
+                                amis.forEach(ami => {
+                                    const amiNom = `${ami.prenom} ${ami.nom}${ami.pseudonyme ? ' (' + ami.pseudonyme + ')' : ''}`;
+                                    html += `
+                                        <div class="chat-friend-item" data-ami-id="${ami._id}" onclick="ouvrirChatAvecAmi('${ami._id}', '${amiNom}')">
+                                            <div class="friend-avatar">👤</div>
+                                            <div class="friend-info">
+                                                <div class="friend-name">${amiNom}</div>
+                                                <div class="friend-status">En ligne</div>
+                                            </div>
+                                            <div class="friend-actions">
+                                                <span class="unread-badge" style="display: none;">0</span>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                container.innerHTML = html;
+                            }
+                        })
+                        .catch(error => {
+                            container.innerHTML = '<p style="color: red;">Erreur de chargement</p>';
+                            console.error('Erreur chargement amis:', error);
+                        });
+                }
+            }
+        }
+        
+        // Fonction de secours pour ouvrirChatAvecAmi - VERSION ROBUSTE ANTI-RECURSION
+        function ouvrirChatAvecAmiSecours(amiId, amiNom) {
+            console.log(`🔄 [SECOURS] Tentative d'ouverture chat avec ${amiNom} (${amiId})`);
+            
+            // Prévenir la récursion avec un flag
+            if (window._preventChatRecursion) {
+                console.error("❌ [SECOURS] Récursion détectée, arrêt immédiat");
+                alert('Erreur technique du chat. Veuillez recharger la page.');
+                return;
+            }
+            
+            // Activer le flag de prévention
+            window._preventChatRecursion = true;
+            
+            // Vérifier si le module Chat est disponible
+            if (window.ChatModule && typeof window.ChatModule.ouvrirChatAvecAmi === 'function') {
+                console.log("✅ [SECOURS] Module Chat disponible, redirection");
+                window._preventChatRecursion = false; // Réinitialiser le flag
+                return window.ChatModule.ouvrirChatAvecAmi(amiId, amiNom);
+            }
+            
+            // Essayer de forcer le chargement du module
+            console.log("🚀 [SECOURS] Tentative de forçage du module Chat...");
+            if (typeof window.forcerChargementModuleChat === 'function') {
+                window.forcerChargementModuleChat()
+                    .then(() => {
+                        console.log("✅ [SECOURS] Module forcé, nouvelle tentative...");
+                        window._preventChatRecursion = false;
+                        if (window.ChatModule && typeof window.ChatModule.ouvrirChatAvecAmi === 'function') {
+                            window.ChatModule.ouvrirChatAvecAmi(amiId, amiNom);
+                        } else {
+                            alert('Le module de chat n\'a pas pu être chargé. Veuillez recharger la page.');
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("❌ [SECOURS] Échec du forçage:", error);
+                        window._preventChatRecursion = false;
+                        alert('Erreur de chargement du chat. Veuillez recharger la page.');
+                    });
+            } else {
+                // Fallback - attendre et réessayer UNE SEULE FOIS
+                console.log("⏳ [SECOURS] Module Chat non disponible, attente 2 secondes...");
+                setTimeout(() => {
+                    if (window.ChatModule && typeof window.ChatModule.ouvrirChatAvecAmi === 'function') {
+                        console.log("✅ [SECOURS] Module Chat maintenant disponible");
+                        window._preventChatRecursion = false;
+                        window.ChatModule.ouvrirChatAvecAmi(amiId, amiNom);
+                    } else {
+                        console.error("❌ [SECOURS] Module Chat toujours indisponible");
+                        window._preventChatRecursion = false;
+                        alert('Le module de chat n\'est pas encore chargé. Veuillez recharger la page et réessayer.');
+                    }
+                }, 2000);
+            }
+        }
+        
+        // Définir la fonction de secours globalement avec protection contre la redéfinition
+        if (!window.ouvrirChatAvecAmi) {
+            window.ouvrirChatAvecAmi = ouvrirChatAvecAmiSecours;
+            console.log("🔄 [SECOURS] Fonction de secours définie comme ouvrirChatAvecAmi globale");
+            
+            // Protéger contre la redéfinition accidentelle
+            Object.defineProperty(window, '_ouvrirChatAvecAmiSecours', {
+                value: ouvrirChatAvecAmiSecours,
+                writable: false,
+                configurable: false
+            });
+        }
+        
+        // Rendre la fonction disponible globalement
+        window.chargerListeAmisSecours = chargerListeAmisSecours;
+        
+        // === FONCTION DE FORÇAGE DU MODULE CHAT ===
+        function forcerChargementModuleChat() {
+            console.log("🚀 [FORCE] Forçage du chargement du module Chat...");
+            
+            // Vérifier si le module est déjà chargé
+            if (window.ChatModule && window.ChatModule.status === 'ready') {
+                console.log("✅ [FORCE] Module Chat déjà chargé et prêt");
+                return Promise.resolve();
+            }
+            
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = '/modules/chat.js';
+                script.type = 'text/javascript';
+                
+                script.onload = function() {
+                    console.log("✅ [FORCE] Script chat.js chargé");
+                    
+                    // Attendre que le module s'initialise
+                    let attempts = 0;
+                    const maxAttempts = 20;
+                    
+                    const checkModule = () => {
+                        attempts++;
+                        console.log(`🔍 [FORCE] Vérification module... tentative ${attempts}`);
+                        
+                        if (window.ChatModule && window.ChatModule.status === 'ready') {
+                            console.log("✅ [FORCE] Module Chat prêt!");
+                            resolve();
+                        } else if (attempts >= maxAttempts) {
+                            console.error("❌ [FORCE] Timeout - Module Chat non initialisé");
+                            reject(new Error('Module Chat non initialisé'));
+                        } else {
+                            setTimeout(checkModule, 250);
+                        }
+                    };
+                    
+                    setTimeout(checkModule, 100);
+                };
+                
+                script.onerror = function(error) {
+                    console.error("❌ [FORCE] Erreur chargement script:", error);
+                    reject(error);
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Rendre la fonction disponible globalement
+        window.forcerChargementModuleChat = forcerChargementModuleChat;
+        
+        // Test immédiat après chargement de tous les scripts
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== DOM READY - DEBUT TEST ===');
+            
+            // Test toutes les 500ms pendant 10 secondes
+            let attempts = 0;
+            const maxAttempts = 20;
+            
+            function testModules() {
+                attempts++;
+                console.log(`--- Test ${attempts}/${maxAttempts} ---`);
+                console.log('ChatModule:', typeof window.ChatModule, window.ChatModule);
+                console.log('MessagesModule:', typeof window.MessagesModule);
+                console.log('AmisModule:', typeof window.AmisModule);
+                
+                if (typeof window.ChatModule !== 'undefined') {
+                    console.log('✅ ChatModule détecté!');
+                    return;
+                }
+                
+                if (attempts < maxAttempts) {
+                    setTimeout(testModules, 500);
+                } else {
+                    console.log('❌ ChatModule jamais détecté après', maxAttempts, 'tentatives');
+                    console.log('❌ Scripts qui pourraient avoir échoué à charger:');
+                    document.querySelectorAll('script[src*="modules/"]').forEach(script => {
+                        console.log('📄 Script:', script.src, 'loaded:', script.readyState);
+                    });
+                }
+            }
+            
+            testModules();
+        });
+    </script>
+    
+    <!-- Script de validation (optionnel, pour tests) -->
+    <script src="modules/validation.js" defer></script>
+    
+    <!-- Script de débogage pour password-toggle -->
+    <script>
+        // Script de débogage immédiat pour les boutons password-toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 [DEBUG] Recherche des boutons password-toggle...');
+            
+            // Fonction de débogage pour password toggle
+            function debugPasswordToggle() {
+                const buttons = document.querySelectorAll('.password-toggle');
+                console.log('🔍 [DEBUG] Boutons password-toggle trouvés:', buttons.length);
+                
+                buttons.forEach((button, index) => {
+                    console.log(`🔍 [DEBUG] Bouton ${index + 1}:`, button);
+                    const icon = button.querySelector('.password-toggle-icon');
+                    const targetId = button.getAttribute('data-target');
+                    console.log(`🔍 [DEBUG] - Icône trouvée:`, icon);
+                    console.log(`🔍 [DEBUG] - Target ID:`, targetId);
+                    
+                    // Ajouter un gestionnaire d'événement de débogage
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        console.log('🖱️ [DEBUG] Clic sur password-toggle');
+                        
+                        const passwordInput = document.getElementById(targetId);
+                        const iconElement = button.querySelector('.password-toggle-icon');
+                        
+                        if (!passwordInput) {
+                            console.error('❌ [DEBUG] Champ password introuvable:', targetId);
+                            return;
+                        }
+                        
+                        if (!iconElement) {
+                            console.error('❌ [DEBUG] Icône introuvable');
+                            return;
+                        }
+                        
+                        if (passwordInput.type === 'password') {
+                            passwordInput.type = 'text';
+                            iconElement.textContent = '🙈';
+                            button.setAttribute('aria-label', 'Masquer le mot de passe');
+                            console.log('✅ [DEBUG] Mot de passe affiché');
+                        } else {
+                            passwordInput.type = 'password';
+                            iconElement.textContent = '👁️';
+                            button.setAttribute('aria-label', 'Afficher le mot de passe');
+                            console.log('✅ [DEBUG] Mot de passe masqué');
+                        }
+                    });
+                });
+            }
+            
+            // Exécuter immédiatement
+            debugPasswordToggle();
+            
+            // Réessayer après un délai au cas où les modales ne seraient pas encore chargées
+            setTimeout(debugPasswordToggle, 500);
+        });
+    </script>
+</head>
+<body>
+    <!-- ========================================
+    💡 SECTION D'INITIALISATION OPTIMISÉE
+    ======================================== -->
+    <div id="incru" class="incru"></div>
+    
+    <!-- ========================================
+    🏠 HEADER NAVIGATION 
+    ======================================== -->
+    <header>
+        <div class="header-container">
+            <a href="#" class="logo">ChezNous</a>
+            
+            <nav>
+                <ul id="navMenu">
+                    <li><a href="#" id="loginBtn">Connexion</a></li>
+                    <li><a href="#" id="registerBtn">Inscription</a></li>
+                    <li><a href="#" id="logoutBtn" style="display:none;">Déconnexion</a></li>
+                </ul>
+            </nav>
+            
+            <div class="header-actions">
+                <div class="user-info" id="accountBtn" style="display:none;">
+                    <div class="user-avatar" id="userIcon">👤</div>
+                    <span class="user-name" id="userName"></span>
+                </div>
+                
+                <button class="nav-toggle" id="navToggle" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- ========================================
+    🎉 SECTION DE BIENVENUE
+    ======================================== -->
+    <section class="welcome-section">
+        <div class="welcome-container">
+            <h1 class="welcome-title">Bienvenue Chez Nous !</h1>
+            <p class="welcome-subtitle">Le Réseau Social des voisins</p>
+        </div>
+    </section>
+    
+    <!-- ========================================
+    📱 CONTENU PRINCIPAL - BENTO GRID
+    ======================================== -->
+    <main>
+        <section id="home" class="bento-grid">
+            
+            <!-- ========================================
+            👤 SECTION PROFIL UTILISATEUR
+            ======================================== -->
+            <div class="bento-item" id="profilSection" style="display:none;">
+                <div class="profil-container">
+                    <h2>👤 Ma page profil</h2>
+                    
+                    <!-- En-tête du profil -->
+                    <div class="profil-header">
+                        <span class="profil-icon">👤</span>
+                        <button id="voirProfilBtn" 
+                                class="btn-voir-profil" 
+                                aria-expanded="false" 
+                                aria-controls="profil-details"
+                                aria-label="Voir les détails du profil utilisateur">
+                            Voir le profil
+                        </button>
+                    </div>
+                    
+                    <!-- Détails du profil (masqués par défaut) -->
+                    <div id="profil-details" class="profil-details" style="display: none;" aria-hidden="true">
+                        <div class="profil-infos">
+                            <p><strong>Nom :</strong> <span id="profilNom">-</span></p>
+                            <p><strong>Prénom :</strong> <span id="profilPrenom">-</span></p>
+                            <p><strong>Pseudo :</strong> <span id="profilPseudo">-</span></p>
+                            <p><strong>Région :</strong> <span id="profilRegion">-</span></p>
+                            <p><strong>Email :</strong> <span id="profilEmail">-</span></p>
+                            <p><strong>Rôle :</strong> <span id="profilRole">-</span></p>
+                        </div>
+                    </div>
+                    
+                    <!-- ========================================
+                    💬 MESSAGES PERSONNELS
+                    ======================================== -->
+                    <div class="form-group">
+                        <label for="messagePersonnel">Message personnel :</label>
+                        <textarea id="messagePersonnel" 
+                                  rows="3" 
+                                  style="width:100%" 
+                                  placeholder="Publie ton message dans ta page profil"></textarea>
+                        <div style="margin-top: 10px;">
+                            <button id="saveMessagePersonnel">Enregistrer</button>
+                            <button id="toggleHistoriquePersonnel" class="btn success" style="margin-left: 10px;">
+                                📋 Voir historique
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Zone d'affichage des messages personnels -->
+                    <div id="messagesPersonnels"></div>
+                    
+                    <!-- Container historique personnel -->
+                    <div id="historiquePersonnelContainer" 
+                         style="display: none; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
+                        <h4 style="color: #1565c0; margin-bottom: 10px; font-weight: bold;">
+                            📋 Historique de vos messages personnels
+                        </h4>
+                        <div style="margin-bottom: 10px;">
+                            <button id="viderHistoriquePersonnel" class="btn danger" style="font-size: 12px;">
+                                🗑️ Vider historique
+                            </button>
+                            <span id="compteurPersonnel" style="margin-left: 10px; font-style: italic; color: #6c757d;"></span>
+                        </div>
+                        <div id="historiquePersonnelListe" style="max-height: 300px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <!-- ========================================
+                    👥 MESSAGES DES AMIS SUR MON PROFIL
+                    ======================================== -->
+                    <div class="form-group profile-messages-section" 
+                         style="background-color: #ffffff; padding: 20px; border-radius: 16px; margin-top: 20px; border: 2px solid #e3eafc; box-shadow: 0 2px 12px rgba(21, 101, 192, 0.08);">
+                        <h3 style="color: #1565c0; font-weight: bold; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            🎉 Messages de tes amis sur ton profil :
+                        </h3>
+                        
+                        <!-- Zone d'affichage des messages d'amis -->
+                        <div id="messagesAmisProfilMoi"></div>
+                        
+                        <!-- Actions pour les messages d'amis -->
+                        <div class="profile-actions">
+                            <button id="rafraichirMessagesAmis" class="btn btn-actualiser">🔄 Actualiser</button>
+                            <button id="toggleHistoriqueAmis" class="btn btn-actualiser">📋 Voir historique</button>
+                        </div>
+                        
+                        <!-- Container historique amis -->
+                        <div id="historiqueAmisContainer" 
+                             style="display: none; margin-top: 15px; padding: 20px; background-color: #ffffff; border-radius: 16px; border: 2px solid #e3eafc; box-shadow: 0 2px 12px rgba(21, 101, 192, 0.08);">
+                            <h4 style="color: #1565c0; margin-bottom: 15px; font-weight: bold; display: flex; align-items: center; gap: 0.5rem;">
+                                📋 Historique des messages d'amis
+                            </h4>
+                            <div style="margin-bottom: 10px;">
+                                <button id="viderHistoriqueAmis" class="btn danger" style="font-size: 12px;">
+                                    🗑️ Vider historique
+                                </button>
+                                <span id="compteurAmis" style="margin-left: 10px; font-style: italic; color: #6c757d;"></span>
+                            </div>
+                            <div id="historiqueAmisListe" style="max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ========================================
+            📰 SECTION À LA UNE
+            ======================================== -->
+            <div class="bento-item" id="featured">
+                <h2>📰 À la Une</h2>
+                <ul id="featuredList"></ul>
+            </div>
+            
+            <!-- ========================================
+            ❤️ SECTION COUP DE CŒUR
+            ======================================== -->
+            <div class="bento-item" id="favorite">
+                <h2>❤️ Coup de cœur</h2>
+                <img src="/assets/images/ensemble.jpg" alt="Chez Nous - Notre communauté">
+                <p>Découvrez nos activités communautaires et nos projets en cours !</p>
+            </div>
+            
+            <!-- ========================================
+            🗂️ SECTION TOPICS
+            ======================================== -->
+            <div class="bento-item" id="topicsGrid">
+                <h2>🗂️ Topics</h2>
+                <ul></ul>
+            </div>
+            
+            <!-- ========================================
+            ✍️ SECTION ECRIRE DANS LE PROFIL D'UN AMI
+            ======================================== -->
+            <div class="bento-item mes-amis-section" id="amisConfirmesSection" style="display:none;">
+                <h2>✍️ Ecrire dans le profil d'un ami</h2>
+                
+                <!-- Filtre des amis -->
+                <input type="text" id="filtreAmis" placeholder="Filtrer les amis...">
+                
+                <!-- Liste des amis -->
+                <div id="listeAmis"></div>
+                
+                <!-- ========================================
+                 PUBLIER SUR PROFIL D'AMI
+                ======================================== -->
+                <div class="form-group">
+                    <label for="messageProfilAmi">Publier un message sur le profil d'un ami :</label>
+                    <select id="amiSelectionProfil">
+                        <option value="">Sélectionner un ami...</option>
+                    </select>
+                    <textarea id="messageProfilAmi" rows="3" style="width:100%" placeholder="Écrivez votre message..."></textarea>
+                    <div class="btn-group">
+                        <button id="publierMessageProfil" class="btn">Publier sur profil</button>
+                    </div>
+                </div>
+                
+                <!-- Filtrage avancé pour profil d'ami -->
+                <div class="form-group">
+                    <label for="filtreAmiProfil">Rechercher un ami pour son profil :</label>
+                    <input type="text" id="filtreAmiProfil" placeholder="Tapez le nom d'un ami...">
+                    <div id="listeAmisPourProfil"></div>
+                </div>
+            </div>
+            
+            <!-- ========================================
+             SECTION CHAT EN TEMPS RÉEL
+            ======================================== -->
+            <div class="bento-item chat-section" id="chatSection" style="display:none;">
+                <h2>💬 Chat en temps réel</h2>
+                
+                <!-- Liste d'amis pour le chat -->
+                <div class="chat-friends-list">
+                    <h3>👥 Liste d'amis</h3>
+                    <div style="margin-bottom: 10px;">
+                        <button onclick="chargerListeAmisSecours()" style="padding: 5px 10px; background: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 Actualiser liste</button>
+                    </div>
+                    <div id="chatAmisListe" class="friends-list-chat"></div>
+                </div>
+                
+                <!-- Sélection de l'ami pour le chat -->
+                <div class="chat-selection">
+                    <label for="amiChatSelection">Chatter avec :</label>
+                    <select id="amiChatSelection">
+                        <option value="">Sélectionner un ami...</option>
+                    </select>
+                </div>
+                
+                <!-- Zone d'affichage des messages du chat -->
+                <div id="chatMessages" class="chat-messages"></div>
+                
+                <!-- Statut de frappe -->
+                <div id="typingStatus" class="typing-status"></div>
+                
+                <!-- Zone de saisie du message -->
+                <div class="chat-input-section">
+                    <label for="chatInput" class="chat-input-label">
+                        💬 Votre message
+                        <span class="required" aria-label="Champ obligatoire">*</span>
+                    </label>
+                    <div class="chat-input-container">
+                        <textarea id="chatInput" 
+                                  name="chatMessage"
+                                  placeholder="Écrivez votre message ici... Utilisez Ctrl+Entrée ou Entrée pour envoyer. Ce message sera visible par votre correspondant uniquement."
+                                  maxlength="500"
+                                  rows="4"
+                                  minlength="1"
+                                  required
+                                  autocomplete="off"
+                                  spellcheck="true"
+                                  aria-describedby="chatInputHelp chatInputError charCounter"
+                                  aria-invalid="false"
+                                  style="min-height: 80px; resize: vertical; font-size: 16px; line-height: 1.4; padding: 12px;"
+                                  role="textbox"
+                                  aria-multiline="true"
+                                  data-privacy="Les messages sont stockés de manière sécurisée et ne sont visibles que par vous et votre correspondant."></textarea>
+                        <div id="chatInputHelp" class="field-help" style="font-size: 13px; color: #6c757d; margin-top: 4px;">
+                            <small>
+                                📋 Conseils : Utilisez Ctrl+Entrée pour envoyer rapidement. 
+                                🔒 Conformité RGPD : Vos messages sont chiffrés et stockés de manière sécurisée.
+                            </small>
+                        </div>
+                        <div id="chatInputError" class="error-message" role="alert" aria-live="polite"></div>
+                    </div>
+                    <div class="chat-controls">
+                        <div class="chat-controls-left">
+                            <span id="charCounter" class="char-counter" aria-live="polite">0/500 caractères</span>
+                            <span class="privacy-notice" style="font-size: 11px; color: #28a745;">
+                                🔒 Messages privés et sécurisés
+                            </span>
+                        </div>
+                        <div class="chat-controls-right">
+                            <button id="sendBtn" 
+                                    class="btn-send" 
+                                    type="button"
+                                    disabled
+                                    aria-label="Envoyer le message"
+                                    title="Envoyer votre message (Ctrl+Entrée)">
+                                📤 Envoyer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </section>
+    </main>
+    
+    <!-- ========================================
+    🦶 FOOTER
+    ======================================== -->
+    <footer>
+        <p>&copy; 2025 Chez Nous ! Le Réseau Social de l'immeuble</p>
+    </footer>
+
+    <!-- ========================================
+    🔐 MODALES DE CONNEXION ET INSCRIPTION
+    ======================================== -->
+    <!-- Modal de connexion -->
+    <dialog id="loginModal" class="modal" role="dialog" aria-labelledby="loginModalTitle" aria-describedby="loginModalDesc">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="loginModalTitle">🔐 Connexion à ChezNous</h2>
+                <button type="button" class="close-button" aria-label="Fermer la modale de connexion" data-close="loginModal">&times;</button>
+            </div>
+            <p id="loginModalDesc" class="modal-description">
+                Connectez-vous à votre compte ChezNous. Email + mot de passe de 6 caractères.
+            </p>
+            <form id="loginForm" novalidate>
+                <div class="form-group">
+                    <label for="loginEmail">
+                        Adresse email <span class="required" aria-label="Champ obligatoire">*</span>
+                    </label>
+                    <input 
+                        type="email" 
+                        id="loginEmail" 
+                        name="email" 
+                        required 
+                        autocomplete="email"
+                        placeholder="votre@email.com"
+                        aria-describedby="loginEmailError"
+                        aria-invalid="false"
+                    >
+                    <div id="loginEmailError" class="error-message" role="alert" aria-live="polite"></div>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">
+                        Mot de passe <span class="required" aria-label="Champ obligatoire">*</span>
+                    </label>
+                    <div class="password-input-container">
+                        <input 
+                            type="password" 
+                            id="loginPassword" 
+                            name="password" 
+                            required 
+                            autocomplete="current-password"
+                            placeholder="Entrez votre mot de passe (au moins 6 caractères)"
+                            aria-describedby="loginPasswordError"
+                            aria-invalid="false"
+                            minlength="6"
+                        >
+                        <button type="button" class="password-toggle" aria-label="Afficher/masquer le mot de passe" data-target="loginPassword">
+                            <span class="password-toggle-icon">👁️</span>
+                        </button>
+                    </div>
+                    <div id="loginPasswordError" class="error-message" role="alert" aria-live="polite"></div>
+                </div>
+                <div class="form-options">
+                    <a href="#" class="forgot-password-link">Mot de passe oublié ?</a>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-text">Se connecter</span>
+                        <span class="btn-loader" aria-hidden="true"></span>
+                    </button>
+                </div>
+                <div class="form-footer">
+                    <p>Pas encore de compte ? <a href="#" id="showRegister">Créer un compte</a></p>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- Modal d'inscription -->
+    <dialog id="registerModal" class="modal" role="dialog" aria-labelledby="registerModalTitle" aria-describedby="registerModalDesc">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="registerModalTitle">📝 Inscription à ChezNous</h2>
+                <button type="button" class="close-button" aria-label="Fermer la modale d'inscription" data-close="registerModal">&times;</button>
+            </div>
+            <p id="registerModalDesc" class="modal-description">
+                Rejoignez votre communauté ! Remplissez tous les champs - mot de passe : 6 caractères exactement.
+            </p>
+            
+            <form id="registerForm" novalidate>
+                <div class="form-container">
+                    
+                    <div class="form-group">
+                        <label for="registerNom">
+                            Nom <span class="required" aria-label="Champ obligatoire">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="registerNom" 
+                            name="nom" 
+                            required 
+                            autocomplete="family-name"
+                            placeholder="Votre nom"
+                            aria-describedby="registerNomError"
+                            aria-invalid="false"
+                            minlength="2"
+                            maxlength="50"
+                        >
+                        <div id="registerNomError" class="error-message" role="alert" aria-live="polite"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerPrenom">
+                            Prénom <span class="required" aria-label="Champ obligatoire">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="registerPrenom" 
+                            name="prenom" 
+                            required 
+                            autocomplete="given-name"
+                            placeholder="Votre prénom"
+                            aria-describedby="registerPrenomError"
+                            aria-invalid="false"
+                            minlength="2"
+                            maxlength="50"
+                        >
+                        <div id="registerPrenomError" class="error-message" role="alert" aria-live="polite"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerEmail">
+                            Email <span class="required" aria-label="Champ obligatoire">*</span>
+                        </label>
+                        <input 
+                            type="email" 
+                            id="registerEmail" 
+                            name="email" 
+                            required 
+                            autocomplete="email"
+                            placeholder="votre@email.com"
+                            aria-describedby="registerEmailError"
+                            aria-invalid="false"
+                        >
+                        <div id="registerEmailError" class="error-message" role="alert" aria-live="polite"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerPassword">
+                            Mot de passe <span class="required" aria-label="Champ obligatoire">*</span>
+                        </label>
+                        <div class="password-input-container">
+                            <input 
+                                type="password" 
+                                id="registerPassword" 
+                                name="password" 
+                                required 
+                                autocomplete="new-password"
+                                placeholder="Au moins 6 caractères (ex: abc123!)"
+                                aria-describedby="registerPasswordError"
+                                aria-invalid="false"
+                                minlength="6"
+                            >
+                            <button type="button" class="password-toggle" aria-label="Afficher/masquer le mot de passe" data-target="registerPassword">
+                                <span class="password-toggle-icon">👁️</span>
+                            </button>
+                        </div>
+                        <div class="field-help">
+                            <small>Choisissez au moins 6 caractères (lettres, chiffres, caractères spéciaux comme ! autorisés)</small>
+                        </div>
+                        <div id="registerPasswordError" class="error-message" role="alert" aria-live="polite"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerPasswordConfirm">
+                            Confirmer le mot de passe <span class="required" aria-label="Champ obligatoire">*</span>
+                        </label>
+                        <div class="password-input-container">
+                            <input 
+                                type="password" 
+                                id="registerPasswordConfirm" 
+                                name="passwordConfirm" 
+                                required 
+                                autocomplete="new-password"
+                                placeholder="Retapez votre mot de passe"
+                                aria-describedby="registerPasswordConfirmError"
+                                aria-invalid="false"
+                                minlength="6"
+                            >
+                            <button type="button" class="password-toggle" aria-label="Afficher/masquer le mot de passe" data-target="registerPasswordConfirm">
+                                <span class="password-toggle-icon">👁️</span>
+                            </button>
+                        </div>
+                        <div id="registerPasswordConfirmError" class="error-message" role="alert" aria-live="polite"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-full-width">
+                            ✅ Créer mon compte
+                        </button>
+                    </div>
+
+                    <div class="form-footer">
+                        <p>Déjà inscrit ? <a href="#" data-switch-modal="registerModal,loginModal">Se connecter</a></p>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- Script de débogage pour password-toggle -->
+    <script>
+        // Script de débogage immédiat pour les boutons password-toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 [DEBUG] Recherche des boutons password-toggle...');
+            
+            // Fonction de débogage pour password toggle
+            function debugPasswordToggle() {
+                const buttons = document.querySelectorAll('.password-toggle');
+                console.log('🔍 [DEBUG] Boutons password-toggle trouvés:', buttons.length);
+                
+                buttons.forEach((button, index) => {
+                    console.log(`🔍 [DEBUG] Bouton ${index + 1}:`, button);
+                    const icon = button.querySelector('.password-toggle-icon');
+                    const targetId = button.getAttribute('data-target');
+                    console.log(`🔍 [DEBUG] - Icône trouvée:`, icon);
+                    console.log(`🔍 [DEBUG] - Target ID:`, targetId);
+                    
+                    // Ajouter un gestionnaire d'événement de débogage
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        console.log('🖱️ [DEBUG] Clic sur password-toggle');
+                        
+                        const passwordInput = document.getElementById(targetId);
+                        const iconElement = button.querySelector('.password-toggle-icon');
+                        
+                        if (!passwordInput) {
+                            console.error('❌ [DEBUG] Champ password introuvable:', targetId);
+                            return;
+                        }
+                        
+                        if (!iconElement) {
+                            console.error('❌ [DEBUG] Icône introuvable');
+                            return;
+                        }
+                        
+                        if (passwordInput.type === 'password') {
+                            passwordInput.type = 'text';
+                            iconElement.textContent = '🙈';
+                            button.setAttribute('aria-label', 'Masquer le mot de passe');
+                            console.log('✅ [DEBUG] Mot de passe affiché');
+                        } else {
+                            passwordInput.type = 'password';
+                            iconElement.textContent = '👁️';
+                            button.setAttribute('aria-label', 'Afficher le mot de passe');
+                            console.log('✅ [DEBUG] Mot de passe masqué');
+                        }
+                    });
+                });
+            }
+            
+            // Exécuter immédiatement
+            debugPasswordToggle();
+            
+            // Réessayer après un délai au cas où les modales ne seraient pas encore chargées
+            setTimeout(debugPasswordToggle, 500);
+        });
+    </script>
+</body>
+</html>
