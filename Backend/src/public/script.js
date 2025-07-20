@@ -924,16 +924,22 @@ const FriendsManager = {
         const user = JSON.parse(localStorage.getItem('user'));
         
         try {
-            await fetch(API_CONFIG.url('/friends/demander'), {
+            const response = await fetch(API_CONFIG.url('/friends/demander'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user._id, cibleId })
             });
             
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+            }
+            
             console.log('📤 [FRIENDS] Demande d\'amitié envoyée à:', cibleId);
             await this.loadRelations(); // Recharger les listes
         } catch (error) {
             console.error('❌ [FRIENDS] Erreur envoi demande d\'amitié:', error);
+            throw error; // Re-lancer l'erreur pour que les modules appelants puissent la gérer
         }
     },
 
@@ -944,16 +950,22 @@ const FriendsManager = {
         const user = JSON.parse(localStorage.getItem('user'));
         
         try {
-            await fetch(API_CONFIG.url('/friends/accepter'), {
+            const response = await fetch(API_CONFIG.url('/friends/accepter'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user._id, demandeurId })
             });
             
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+            }
+            
             console.log('✅ [FRIENDS] Demande d\'amitié acceptée de:', demandeurId);
             await this.loadRelations(); // Recharger les listes
         } catch (error) {
             console.error('❌ [FRIENDS] Erreur acceptation demande d\'amitié:', error);
+            throw error; // Re-lancer l'erreur pour que les modules appelants puissent la gérer
         }
     }
 };
