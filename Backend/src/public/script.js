@@ -21,8 +21,8 @@
 
 console.log('🚀 [INIT] Démarrage de l\'application ChezNous');
 
-// Configuration Socket.IO
-const socket = io('http://localhost:5000', {
+// Configuration Socket.IO avec URL dynamique
+const socket = io(API_CONFIG.SOCKET_URL, {
     withCredentials: false,
     transports: ['polling', 'websocket'],
     reconnection: true,
@@ -477,9 +477,9 @@ const AuthManager = {
                 return;
             }
             
-            console.log('🌐 [AUTH] Envoi de la requête vers http://localhost:5000/users/login');
+            console.log('🌐 [AUTH] Envoi de la requête vers', API_CONFIG.url('/users/login'));
             
-            const response = await fetch('http://localhost:5000/users/login', {
+            const response = await fetch(API_CONFIG.url('/users/login'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -569,7 +569,7 @@ const AuthManager = {
         };
         
         try {
-            const response = await fetch('http://localhost:5000/users/register', {
+            const response = await fetch(API_CONFIG.url('/users/register'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userData)
@@ -640,7 +640,7 @@ const AuthManager = {
             
             let errorMessage = 'Erreur d\'inscription. ';
             if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                errorMessage += 'Vérifiez que le serveur est démarré sur http://localhost:5000';
+                errorMessage += 'Vérifiez que le serveur est accessible sur ' + API_CONFIG.BASE_URL;
             } else if (error.name === 'SyntaxError') {
                 errorMessage += 'Réponse du serveur invalide.';
             } else {
