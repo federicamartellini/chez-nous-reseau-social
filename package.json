@@ -1,0 +1,32 @@
+{
+  "name": "chez-nous-reseau-social",
+  "version": "1.0.0",
+  "description": "Application de réseau social pour résidents d'immeuble",
+  "main": "Backend/src/app.js",
+  "scripts": {
+    "start": "cd Backend && npm start",
+    "dev": "cd Backend && npm run dev",
+    "install-deps": "cd Backend && npm install",
+    "build": "echo 'No build step required'",
+    "deploy:vercel": "vercel --prod",
+    "deploy:railway": "railway deploy"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/federicamartellini/chez-nous-reseau-social.git"
+  },
+  "keywords": [
+    "social-network",
+    "nodejs",
+    "express",
+    "socket.io",
+    "mongodb",
+    "community"
+  ],
+  "author": "Federica Martellini",
+  "license": "MIT"
+}
