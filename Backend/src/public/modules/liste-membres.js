@@ -281,18 +281,59 @@ const ListeMembresModule = {
     async ajouterAmi(membreId) {
         console.log(`➕ [LISTE-MEMBRES] Ajouter ami: ${membreId}`);
         
-        // Vérifier si le module amis est disponible
-        if (window.FriendsModule && typeof window.FriendsModule.sendFriendRequest === 'function') {
+        // Vérifier si le module FriendsManager est disponible (il s'appelle FriendsManager, pas FriendsModule)
+        if (window.FriendsManager && typeof window.FriendsManager.sendFriendRequest === 'function') {
             try {
-                await window.FriendsModule.sendFriendRequest(membreId);
-                console.log("✅ [LISTE-MEMBRES] Demande d'amitié envoyée via FriendsModule");
+                await window.FriendsManager.sendFriendRequest(membreId);
+                console.log("✅ [LISTE-MEMBRES] Demande d'amitié envoyée via FriendsManager");
+                
+                // Actualiser la liste pour refléter le changement
+                this.chargerMembres();
+                
             } catch (error) {
                 console.error("❌ [LISTE-MEMBRES] Erreur demande d'amitié:", error);
                 alert("Erreur lors de l'envoi de la demande d'amitié");
             }
         } else {
-            console.warn("⚠️ [LISTE-MEMBRES] Module Friends non disponible");
-            alert("Fonctionnalité temporairement indisponible. Utilisez la section Amis pour envoyer des demandes.");
+            console.warn("⚠️ [LISTE-MEMBRES] Module FriendsManager non disponible");
+            
+            // Solution de secours : appel direct à l'API
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user || !user._id) {
+                    alert("Vous devez être connecté pour envoyer une demande d'amitié");
+                    return;
+                }
+                
+                console.log("🔄 [LISTE-MEMBRES] Utilisation de l'API directe pour demande d'amitié");
+                
+                const response = await fetch(API_CONFIG.url('/friends/demander'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: user._id,
+                        cibleId: membreId
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log("✅ [LISTE-MEMBRES] Demande d'amitié envoyée via API directe");
+                alert("Demande d'amitié envoyée avec succès !");
+                
+                // Actualiser la liste pour refléter le changement
+                this.chargerMembres();
+                
+            } catch (error) {
+                console.error("❌ [LISTE-MEMBRES] Erreur API directe:", error);
+                alert(`Erreur: ${error.message}`);
+            }
         }
     },
     
