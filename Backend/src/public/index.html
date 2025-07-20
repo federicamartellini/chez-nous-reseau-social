@@ -77,7 +77,7 @@
                 if (container) {
                     container.innerHTML = '<p style="text-align: center; color: #1565c0;">⏳ Chargement...</p>';
                     
-                    fetch(`http://localhost:5000/friends/amis?userId=${user._id}`)
+                    fetch(API_CONFIG.url(`/friends/amis?userId=${user._id}`))
                         .then(response => response.json())
                         .then(amis => {
                             if (amis.length === 0) {

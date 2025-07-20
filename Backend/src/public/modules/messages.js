@@ -162,7 +162,7 @@ async function chargerMessagesPersonnels() {
         console.log("📡 [TERMINAL] Requête HTTP vers API messagespersonnels");
         console.log(`🌐 [TERMINAL] URL : /api/messagespersonnels/${userId}`);
         
-        const res = await fetch(`http://localhost:5000/api/messagespersonnels/${userId}`);
+        const res = await fetch(API_CONFIG.url(`/api/messagespersonnels/${userId}`));
         
         console.log("📊 [TERMINAL] Réponse serveur pour messages personnels");
         console.log(`   ├── Statut HTTP : ${res.status}`);
@@ -273,7 +273,7 @@ async function chargerMessagesAmisProfilMoi() {
         console.log(`📡 [MESSAGES] REQUÊTE HTTP - Appel API vers /messages/profil/${userId}`);
         console.log("🌐 [TERMINAL] Envoi requête pour récupérer messages reçus");
         
-        const res = await fetch(`http://localhost:5000/messages/profil/${userId}`);
+        const res = await fetch(API_CONFIG.url(`/messages/profil/${userId}`));
         
         console.log(`📊 [MESSAGES] RÉPONSE HTTP - Statut reçu du serveur: ${res.status}`);
         console.log(`📡 [TERMINAL] Serveur a répondu avec le statut: ${res.status}`);
