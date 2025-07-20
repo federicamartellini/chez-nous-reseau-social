@@ -69,17 +69,32 @@ const ListeMembresModule = {
             // Afficher le loading
             this.afficherLoading();
             
-            // Appel API pour récupérer tous les membres
-            const response = await fetch(API_CONFIG.url(`/friends/membres?userId=${user._id}`));
+            // Charger les membres ET les relations d'amitié en parallèle
+            const [responseMembres, responseAmis, responseEnvoyees, responseRecues] = await Promise.all([
+                fetch(API_CONFIG.url(`/friends/membres?userId=${user._id}`)),
+                fetch(API_CONFIG.url(`/friends/amis?userId=${user._id}`)),
+                fetch(API_CONFIG.url(`/friends/demandes-envoyees?userId=${user._id}`)),
+                fetch(API_CONFIG.url(`/friends/demandes-recues?userId=${user._id}`))
+            ]);
             
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+            if (!responseMembres.ok) {
+                throw new Error(`Erreur HTTP: ${responseMembres.status}`);
             }
             
-            tousLesMembres = await response.json();
+            tousLesMembres = await responseMembres.json();
+            const amisConfirmes = responseAmis.ok ? await responseAmis.json() : [];
+            const demandesEnvoyees = responseEnvoyees.ok ? await responseEnvoyees.json() : [];
+            const demandesRecues = responseRecues.ok ? await responseRecues.json() : [];
+            
+            // Stocker les relations pour l'affichage des boutons
+            this.amisConfirmes = amisConfirmes;
+            this.demandesEnvoyees = demandesEnvoyees;
+            this.demandesRecues = demandesRecues;
+            
             membresFiltres = [...tousLesMembres];
             
             console.log(`✅ [LISTE-MEMBRES] ${tousLesMembres.length} membres chargés`);
+            console.log(`👥 [LISTE-MEMBRES] Relations: ${amisConfirmes.length} amis, ${demandesEnvoyees.length} envoyées, ${demandesRecues.length} reçues`);
             
             // Mettre à jour l'affichage
             this.afficherMembres();
@@ -139,8 +154,88 @@ const ListeMembresModule = {
      * Crée le HTML pour une carte membre
      */
     creerCarteMembre(membre) {
+        const user = JSON.parse(localStorage.getItem('user'));
         const roleIcon = this.obtenirIconeRole(membre.role);
         const regionText = membre.region ? ` - ${membre.region}` : '';
+        
+        // Ne pas afficher sa propre carte
+        if (membre._id === user._id) {
+            return '';
+        }
+        
+        // Déterminer l'état de la relation
+        const estAmi = this.amisConfirmes && this.amisConfirmes.some(a => String(a._id) === String(membre._id));
+        const demandeEnvoyee = this.demandesEnvoyees && this.demandesEnvoyees.some(d => String(d._id) === String(membre._id));
+        const demandeRecue = this.demandesRecues && this.demandesRecues.some(d => String(d._id) === String(membre._id));
+        
+        // Générer le bouton approprié
+        let boutonAction = '';
+        if (estAmi) {
+            boutonAction = `
+                <button style="
+                    padding: 4px 8px; 
+                    background: #28a745; 
+                    color: white; 
+                    border: none; 
+                    border-radius: 4px; 
+                    font-size: 12px; 
+                    cursor: default;
+                    opacity: 0.8;
+                " 
+                disabled
+                title="Vous êtes déjà amis">
+                    ✅ Ami confirmé
+                </button>
+            `;
+        } else if (demandeEnvoyee) {
+            boutonAction = `
+                <button style="
+                    padding: 4px 8px; 
+                    background: #ffc107; 
+                    color: #333; 
+                    border: none; 
+                    border-radius: 4px; 
+                    font-size: 12px; 
+                    cursor: default;
+                " 
+                disabled
+                title="Demande d'amitié en attente">
+                    ⏳ En attente de confirmation
+                </button>
+            `;
+        } else if (demandeRecue) {
+            boutonAction = `
+                <button onclick="event.stopPropagation(); ListeMembresModule.accepterDemande('${membre._id}')" 
+                        style="
+                            padding: 4px 8px; 
+                            background: #17a2b8; 
+                            color: white; 
+                            border: none; 
+                            border-radius: 4px; 
+                            font-size: 12px; 
+                            cursor: pointer;
+                        "
+                        title="Accepter la demande d'amitié">
+                    🤝 Demande d'amitié
+                </button>
+            `;
+        } else {
+            boutonAction = `
+                <button onclick="event.stopPropagation(); ListeMembresModule.ajouterAmi('${membre._id}')" 
+                        style="
+                            padding: 4px 8px; 
+                            background: #007bff; 
+                            color: white; 
+                            border: none; 
+                            border-radius: 4px; 
+                            font-size: 12px; 
+                            cursor: pointer;
+                        "
+                        title="Ajouter comme ami">
+                    ➕ Ajouter ami
+                </button>
+            `;
+        }
         
         return `
             <div class="membre-carte" style="
@@ -184,19 +279,7 @@ const ListeMembresModule = {
                 </div>
                 
                 <div class="membre-actions" style="margin-left: 8px;">
-                    <button onclick="event.stopPropagation(); ListeMembresModule.ajouterAmi('${membre._id}')" 
-                            style="
-                                padding: 4px 8px; 
-                                background: #28a745; 
-                                color: white; 
-                                border: none; 
-                                border-radius: 4px; 
-                                font-size: 12px; 
-                                cursor: pointer;
-                            "
-                            title="Ajouter comme ami">
-                        ➕ Ami
-                    </button>
+                    ${boutonAction}
                 </div>
             </div>
         `;
@@ -292,7 +375,13 @@ const ListeMembresModule = {
                 
             } catch (error) {
                 console.error("❌ [LISTE-MEMBRES] Erreur demande d'amitié:", error);
-                alert("Erreur lors de l'envoi de la demande d'amitié");
+                
+                // Vérifier si c'est une demande déjà envoyée
+                if (error.message && error.message.includes('400')) {
+                    alert("Cette demande d'amitié a déjà été envoyée ou vous êtes déjà amis !");
+                } else {
+                    alert("Erreur lors de l'envoi de la demande d'amitié");
+                }
             }
         } else {
             console.warn("⚠️ [LISTE-MEMBRES] Module FriendsManager non disponible");
@@ -320,12 +409,80 @@ const ListeMembresModule = {
                 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+                    
+                    if (response.status === 400) {
+                        alert(errorData.message || "Cette demande d'amitié a déjà été envoyée ou vous êtes déjà amis !");
+                    } else {
+                        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+                    }
+                    return;
                 }
                 
                 const result = await response.json();
                 console.log("✅ [LISTE-MEMBRES] Demande d'amitié envoyée via API directe");
                 alert("Demande d'amitié envoyée avec succès !");
+                
+                // Actualiser la liste pour refléter le changement
+                this.chargerMembres();
+                
+            } catch (error) {
+                console.error("❌ [LISTE-MEMBRES] Erreur API directe:", error);
+                alert(`Erreur: ${error.message}`);
+            }
+        }
+    },
+    
+    /**
+     * Accepter une demande d'amitié reçue
+     */
+    async accepterDemande(demandeurId) {
+        console.log(`🤝 [LISTE-MEMBRES] Accepter demande d'amitié de: ${demandeurId}`);
+        
+        // Vérifier si le module FriendsManager est disponible
+        if (window.FriendsManager && typeof window.FriendsManager.acceptFriendRequest === 'function') {
+            try {
+                await window.FriendsManager.acceptFriendRequest(demandeurId);
+                console.log("✅ [LISTE-MEMBRES] Demande d'amitié acceptée via FriendsManager");
+                
+                // Actualiser la liste pour refléter le changement
+                this.chargerMembres();
+                
+            } catch (error) {
+                console.error("❌ [LISTE-MEMBRES] Erreur acceptation demande:", error);
+                alert("Erreur lors de l'acceptation de la demande d'amitié");
+            }
+        } else {
+            console.warn("⚠️ [LISTE-MEMBRES] Module FriendsManager non disponible");
+            
+            // Solution de secours : appel direct à l'API
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user || !user._id) {
+                    alert("Vous devez être connecté pour accepter une demande d'amitié");
+                    return;
+                }
+                
+                console.log("🔄 [LISTE-MEMBRES] Utilisation de l'API directe pour accepter demande");
+                
+                const response = await fetch(API_CONFIG.url('/friends/accepter'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: user._id,
+                        demandeurId: demandeurId
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log("✅ [LISTE-MEMBRES] Demande d'amitié acceptée via API directe");
+                alert("Demande d'amitié acceptée avec succès !");
                 
                 // Actualiser la liste pour refléter le changement
                 this.chargerMembres();
