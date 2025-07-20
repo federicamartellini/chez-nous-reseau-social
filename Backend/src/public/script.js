@@ -722,6 +722,10 @@ const AuthManager = {
             const membresSection = document.getElementById('membresNonAmisSection');
             if (membresSection) membresSection.style.display = 'block';
             
+            // Afficher la section Liste des membres
+            const listeMembresSection = document.getElementById('listeMembresSection');
+            if (listeMembresSection) listeMembresSection.style.display = 'block';
+            
             // Panneau admin si nécessaire (avec vérification d'existence)
             const adminPanel = document.getElementById('adminPanel');
             if (adminPanel) adminPanel.style.display = user.role === 'admin' ? 'block' : 'none';
@@ -741,6 +745,10 @@ const AuthManager = {
             
             const membresSectionDisconnect = document.getElementById('membresNonAmisSection');
             if (membresSectionDisconnect) membresSectionDisconnect.style.display = 'none';
+            
+            // Masquer la section Liste des membres
+            const listeMembresSectionDisconnect = document.getElementById('listeMembresSection');
+            if (listeMembresSectionDisconnect) listeMembresSectionDisconnect.style.display = 'none';
             
             console.log('ℹ️ [AUTH] Interface en mode déconnecté');
         }

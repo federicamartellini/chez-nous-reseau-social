@@ -26,6 +26,7 @@
     <script src="modules/amis.js" defer></script>
     <script src="modules/chat.js" defer></script>
     <script src="modules/historique.js" defer></script>
+    <script src="modules/liste-membres.js" defer></script>
     <!-- <script src="modules/forms-manager.js" defer></script> --> <!-- Désactivé pour éviter conflit avec AuthManager -->
     <script src="modules/app-init.js" defer></script>
     
@@ -507,6 +508,40 @@
             <div class="bento-item" id="topicsGrid">
                 <h2>🗂️ Topics</h2>
                 <ul></ul>
+            </div>
+            
+            <!-- ========================================
+            👥 SECTION LISTE DES MEMBRES
+            ======================================== -->
+            <div class="bento-item liste-membres-section" id="listeMembresSection" style="display:none;">
+                <h2>👥 Liste des membres inscrits</h2>
+                <p style="color: #6c757d; margin-bottom: 15px; font-size: 14px;">
+                    Découvrez tous les membres de votre communauté "Chez Nous"
+                </p>
+                
+                <!-- Filtre de recherche -->
+                <div class="form-group">
+                    <input type="text" id="filtreMembres" placeholder="Rechercher un membre..." style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <!-- Statistiques -->
+                <div class="membres-stats" style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                    <p id="membresStatsText">Total des membres : <strong id="totalMembres">0</strong></p>
+                </div>
+                
+                <!-- Liste des membres -->
+                <div id="listeMembres" style="max-height: 400px; overflow-y: auto;">
+                    <div class="loading" style="text-align: center; padding: 20px;">
+                        <p>Chargement des membres...</p>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="membres-actions" style="margin-top: 15px; text-align: center;">
+                    <button id="actualiserMembres" class="btn" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        🔄 Actualiser
+                    </button>
+                </div>
             </div>
             
             <!-- ========================================
