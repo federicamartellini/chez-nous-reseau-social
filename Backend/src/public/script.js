@@ -822,19 +822,19 @@ const FriendsManager = {
 
         try {
             // Récupérer tous les membres
-            const resMembres = await fetch(`http://localhost:5000/friends/membres?userId=${user._id}`);
+            const resMembres = await fetch(API_CONFIG.url(`/friends/membres?userId=${user._id}`));
             membres = await resMembres.json();
 
             // Récupérer amis pour écriture dans profil
-            const resAmis = await fetch(`http://localhost:5000/friends/amis?userId=${user._id}`);
+            const resAmis = await fetch(API_CONFIG.url(`/friends/amis?userId=${user._id}`));
             amisConfirmes = await resAmis.json();
 
             // Récupérer demandes envoyées
-            const resEnv = await fetch(`http://localhost:5000/friends/demandes-envoyees?userId=${user._id}`);
+            const resEnv = await fetch(API_CONFIG.url(`/friends/demandes-envoyees?userId=${user._id}`));
             demandesEnvoyees = await resEnv.json();
 
             // Récupérer demandes reçues
-            const resRec = await fetch(`http://localhost:5000/friends/demandes-recues?userId=${user._id}`);
+            const resRec = await fetch(API_CONFIG.url(`/friends/demandes-recues?userId=${user._id}`));
             demandesRecues = await resRec.json();
 
             this.displayConfirmedFriends();
@@ -916,7 +916,7 @@ const FriendsManager = {
         const user = JSON.parse(localStorage.getItem('user'));
         
         try {
-            await fetch('http://localhost:5000/friends/demander', {
+            await fetch(API_CONFIG.url('/friends/demander'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user._id, cibleId })
@@ -936,7 +936,7 @@ const FriendsManager = {
         const user = JSON.parse(localStorage.getItem('user'));
         
         try {
-            await fetch('http://localhost:5000/friends/accepter', {
+            await fetch(API_CONFIG.url('/friends/accepter'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user._id, demandeurId })

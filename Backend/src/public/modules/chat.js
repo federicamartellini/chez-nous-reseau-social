@@ -186,7 +186,7 @@ async function obtenirInformationsAmi(amiId) {
         }
         
         // Récupérer la liste des amis pour trouver celui qui correspond à l'ID
-        const response = await fetch(`http://localhost:5000/friends/amis?userId=${user._id}`);
+        const response = await fetch(API_CONFIG.url(`/friends/amis?userId=${user._id}`));
         
         if (!response.ok) {
             console.error(`❌ [CHAT] Erreur HTTP ${response.status} lors de la récupération des amis`);
@@ -228,7 +228,7 @@ async function chargerMessagesChat(amiId) {
         
         console.log(`📡 [CHAT] Requête historique chat: utilisateur ${userId} avec ami ${amiId}`);
         
-        const res = await fetch(`http://localhost:5000/api/chat/messages/${userId}/${amiId}`);
+        const res = await fetch(API_CONFIG.url(`/api/chat/messages/${userId}/${amiId}`));
         
         if (!res.ok) {
             throw new Error(`Erreur HTTP ${res.status}`);
@@ -374,7 +374,7 @@ async function envoyerMessageChat() {
         }
         
         // Envoyer aussi via HTTP pour la persistance
-        const res = await fetch('http://localhost:5000/api/chat/envoyer', {
+        const res = await fetch(API_CONFIG.url('/api/chat/envoyer'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(messageData)
@@ -891,7 +891,7 @@ async function remplirSelecteurChatAvecAmis() {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (!user._id) return;
         
-        const res = await fetch(`http://localhost:5000/friends/amis?userId=${user._id}`);
+        const res = await fetch(API_CONFIG.url(`/friends/amis?userId=${user._id}`));
         if (!res.ok) return;
         
         const amis = await res.json();
@@ -949,9 +949,9 @@ async function chargerListeAmisChat() {
         }
         
         console.log(`📡 [CHAT] Requête amis pour chat pour utilisateur: ${user._id}`);
-        console.log(`🌐 [CHAT] URL de requête: http://localhost:5000/friends/amis?userId=${user._id}`);
+        console.log(`🌐 [CHAT] URL de requête:`, API_CONFIG.url(`/friends/amis?userId=${user._id}`));
         
-        const response = await fetch(`http://localhost:5000/friends/amis?userId=${user._id}`, {
+        const response = await fetch(API_CONFIG.url(`/friends/amis?userId=${user._id}`), {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'

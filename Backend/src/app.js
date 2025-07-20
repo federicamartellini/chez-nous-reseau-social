@@ -19,13 +19,14 @@ const dbName = 'france';
 const app = express();
 const httpServer = createServer(app);
 
-// Middleware CORS
+// Middleware CORS avec support production
 app.use(cors({
     origin: [
         "http://localhost:5000",
         "http://127.0.0.1:5500",
         "http://localhost:5500",
-        "http://127.0.0.1:5000"
+        "http://127.0.0.1:5000",
+        "https://chez-nous-reseau-social.onrender.com"
     ],
     credentials: false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -60,7 +61,11 @@ console.log('Routes messages personnels configurées');
 // Socket.IO events
 const io = new Server(httpServer, {
     cors: {
-        origin: "http://127.0.0.1:5500",
+        origin: [
+            "http://127.0.0.1:5500",
+            "http://localhost:5000",
+            "https://chez-nous-reseau-social.onrender.com"
+        ],
         methods: ["GET", "POST"],
         allowedHeaders: ["*"],
         credentials: false
@@ -296,14 +301,6 @@ app.set('utilisateursConnectes', utilisateursConnectes);
 
 console.log("✅ [SOCKET] === CONFIGURATION SOCKET.IO TERMINEE ===");
 console.log("🔔 [TERMINAL] Système de notifications chat en temps réel prêt");
-
-// Connexion à la base france avec Mongoose
-mongoose.connect('mongodb://localhost:27017/france', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => console.log('✅ Connexion à MongoDB (france) réussie'))
-.catch(err => console.error('❌ Erreur connexion MongoDB :', err));
 
 // Port d'écoute
 const PORT = process.env.PORT || 5000;

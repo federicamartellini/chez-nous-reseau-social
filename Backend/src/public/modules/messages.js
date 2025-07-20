@@ -70,7 +70,7 @@ async function sauvegarderMessagePersonnel() {
         console.log("🌐 [MESSAGES] TRANSMISSION HTTP - Envoi vers API messagespersonnels");
         console.log("🔧 [TERMINAL] Méthode : POST | Content-Type : application/json");
         
-        const res = await fetch('http://localhost:5000/api/messagespersonnels', {
+        const res = await fetch(API_CONFIG.url('/api/messagespersonnels'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(messageData)

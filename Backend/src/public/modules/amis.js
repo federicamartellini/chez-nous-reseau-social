@@ -32,7 +32,7 @@ async function chargerListeAmis() {
         }
         
         console.log("📡 [AMIS] REQUÊTE HTTP - Appel API vers /friends/amis...");
-        const res = await fetch(`http://localhost:5000/friends/amis?userId=${userId}`);
+        const res = await fetch(API_CONFIG.url(`/friends/amis?userId=${userId}`));
         console.log(`📊 [AMIS] RÉPONSE HTTP - Statut reçu du serveur: ${res.status}`);
         
         if (!res.ok) {
@@ -189,7 +189,7 @@ async function publierMessageProfilAmi() {
         
         console.log("📤 [AMIS] DONNÉES ENVOYÉES - Payload JSON:", requestData);
         
-        const res = await fetch('http://localhost:5000/messages/profil-ami', {
+        const res = await fetch(API_CONFIG.url('/messages/profil-ami'), {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(requestData)
@@ -226,7 +226,7 @@ async function voirProfilAmi(amiId) {
     console.log("📄 [TERMINAL] Chargement des informations profil ami");
     
     try {
-        const res = await fetch(`http://localhost:5000/messages/profil-ami/${amiId}`);
+        const res = await fetch(API_CONFIG.url(`/messages/profil-ami/${amiId}`));
         
         if (!res.ok) {
             throw new Error(`Erreur HTTP ${res.status}`);
