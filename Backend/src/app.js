@@ -173,37 +173,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // NOUVEAU : Notification d'envoi de message chat (événement unifié)
-    socket.on('nouveau message chat', (donneesMessage) => {
-        console.log("📤 [SOCKET] NOUVEAU MESSAGE CHAT - Notification en temps réel");
-        console.log("💬 [TERMINAL] Message envoyé par:", donneesMessage.expediteurPrenom, donneesMessage.expediteurNom);
-        console.log("📥 [TERMINAL] Destinataire:", donneesMessage.destinataireId);
-        console.log("💌 [TERMINAL] Contenu:", donneesMessage.message.substring(0, 30) + "...");
-        
-        // Envoyer notification au destinataire s'il est connecté
-        var destinataireConnecte = utilisateursConnectes.get(donneesMessage.destinataireId);
-        
-        if (destinataireConnecte) {
-            console.log("✅ [SOCKET] DESTINATAIRE EN LIGNE - Envoi notification");
-            console.log("🎯 [TERMINAL] Notification envoyée à:", destinataireConnecte.email);
-            
-            // Envoyer la notification via socket
-            destinataireConnecte.socket.emit('notification nouveau message chat', {
-                expediteurId: donneesMessage.expediteurId,
-                expediteurPrenom: donneesMessage.expediteurPrenom,
-                expediteurNom: donneesMessage.expediteurNom,
-                message: donneesMessage.message,
-                date: donneesMessage.date,
-                typeNotification: 'nouveau_message_chat'
-            });
-            
-            console.log("🔔 [TERMINAL] Notification 'notification nouveau message chat' envoyée avec succès");
-        } else {
-            console.log("⚠️ [SOCKET] DESTINATAIRE HORS LIGNE - Notification stockée pour plus tard");
-            console.log("💤 [TERMINAL] Utilisateur", donneesMessage.destinataireId, "n'est pas connecté");
-        }
-    });
-
     // NOUVEAU : Marquer les messages comme lus
     socket.on('messages lus', (donneesLecture) => {
         console.log("👁️ [SOCKET] MESSAGES LUS - Marquer comme lus");
