@@ -70,6 +70,24 @@ function initialiserSocket() {
             gererNotificationNouveauMessage(messageData);
         });
         
+        // NOUVEAU : Gestionnaire pour les notifications distinctes des messages
+        window.socket.on('notification nouveau message chat', (donneesNotification) => {
+            console.log("🔔 [CHAT] Notification spécifique reçue");
+            console.log("📥 [TERMINAL] Notification de:", donneesNotification.expediteurPrenom, donneesNotification.expediteurNom);
+            
+            // Traiter cette notification comme un nouveau message pour le système de compteurs
+            const messageData = {
+                expediteurId: donneesNotification.expediteurId,
+                expediteurPrenom: donneesNotification.expediteurPrenom,
+                expediteurNom: donneesNotification.expediteurNom,
+                message: donneesNotification.message,
+                date: donneesNotification.date
+            };
+            
+            // Appliquer la même logique de notification
+            gererNotificationNouveauMessage(messageData);
+        });
+        
         window.socket.on('message-envoye-confirmation', (confirmation) => {
             console.log("✅ [CHAT] Confirmation d'envoi reçue:", confirmation);
             if (confirmation.success) {

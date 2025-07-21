@@ -976,61 +976,11 @@ const FriendsManager = {
 
 const NotificationManager = {
     /**
-     * Configuration des écouteurs Socket.IO
+     * Configuration des écouteurs Socket.IO - SIMPLIFIÉ
+     * Les notifications de chat sont gérées par chat.js
      */
     setupSocketListeners() {
-        socket.on('notification nouveau message chat', (donneesNotification) => {
-            console.log('🔔 [SOCKET] Nouvelle notification chat reçue');
-            console.log('📥 [TERMINAL] Message de:', donneesNotification.expediteurPrenom, donneesNotification.expediteurNom);
-            console.log('💬 [TERMINAL] Contenu:', donneesNotification.message.substring(0, 30) + '...');
-            
-            this.handleChatNotification(donneesNotification);
-        });
-        
-        console.log('✅ [SOCKET] Écouteurs de notifications configurés');
-    },
-
-    /**
-     * Traite les notifications de chat
-     */
-    handleChatNotification(donneesNotification) {
-        console.log('🎯 [NOTIFICATION] Traitement notification chat');
-        
-        // Mettre à jour le badge de l'expéditeur
-        const badge = document.getElementById('badge-' + donneesNotification.expediteurId);
-        if (badge) {
-            const compteurActuel = parseInt(badge.textContent || '0');
-            badge.textContent = compteurActuel + 1;
-            badge.style.display = 'inline-block';
-            badge.style.cssText = 'display: inline-block; background-color: #e74c3c; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center; font-size: 12px; line-height: 20px; margin-left: 5px;';
-            console.log('🏷️ [NOTIFICATION] Badge mis à jour pour:', donneesNotification.expediteurPrenom);
-        } else {
-            // Notification toast
-            this.showToastNotification(donneesNotification);
-        }
-    },
-
-    /**
-     * Affiche une notification toast
-     */
-    showToastNotification(donneesNotification) {
-        const notification = document.createElement('div');
-        notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white; padding: 12px; border-radius: 6px; box-shadow: 0 3px 6px rgba(0,0,0,0.2); z-index: 9999; max-width: 280px; font-size: 14px;';
-        notification.innerHTML = `
-            <strong>💬 Nouveau message</strong><br>
-            De: ${donneesNotification.expediteurPrenom} ${donneesNotification.expediteurNom}<br>
-            <small>${donneesNotification.message.substring(0, 40)}...</small>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 5000);
-        
-        console.log('🎨 [NOTIFICATION] Toast affiché');
+        console.log('✅ [SOCKET] Écouteurs de notifications configurés (délégués à chat.js)');
     }
 };
 
