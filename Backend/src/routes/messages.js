@@ -210,24 +210,38 @@ router.delete('/profil/:messageId', requireUser, async (req, res) => {
 
 // Récupérer tous les messages pour l'admin
 router.get('/admin/tous-messages', requireUser, async (req, res) => {
-    console.log("🛡️ [ADMIN] DÉBUT - Récupération de tous les messages pour admin");
-    console.log("👤 [ADMIN] AUTHENTIFICATION - Utilisateur demandeur:", req.userId);
+    console.log("🛡️ [ADMIN] === DÉBUT RÉCUPÉRATION TOUS MESSAGES ===");
+    console.log("👤 [ADMIN] Utilisateur demandeur:", req.userId);
+    console.log("🕐 [ADMIN] Timestamp:", new Date().toISOString());
+    console.log("🌐 [ADMIN] IP client:", req.ip || req.connection.remoteAddress);
     
     try {
         // Vérifier que l'utilisateur est admin
+        console.log("🔍 [ADMIN] Vérification permissions admin...");
         const admin = await Abitante.findById(req.userId);
+        console.log("🔍 [ADMIN] Utilisateur trouvé:", {
+            id: admin?._id,
+            email: admin?.email,
+            role: admin?.role,
+            nom: admin?.nom,
+            prenom: admin?.prenom
+        });
+        
         if (!admin || admin.role !== 'admin') {
-            console.log("❌ [ADMIN] ACCÈS REFUSÉ - Utilisateur non autorisé:", req.userId);
+            console.warn("❌ [ADMIN] ACCÈS REFUSÉ - Utilisateur non autorisé");
+            console.warn("❌ [ADMIN] Rôle requis: 'admin', rôle actuel:", admin?.role);
             return res.status(403).json({ message: "Accès refusé - Droits admin requis" });
         }
         
-        console.log("✅ [ADMIN] AUTORISATION - Admin vérifié:", admin.email);
-        console.log("💾 [ADMIN] BASE DE DONNÉES - Connexion à MongoDB...");
+        console.log("✅ [ADMIN] AUTORISATION ACCORDÉE - Admin vérifié:", admin.email);
+        console.log("💾 [ADMIN] Connexion à MongoDB Atlas...");
         
         const client = await MongoClient.connect(uri);
         const db = client.db(dbName);
+        console.log("✅ [ADMIN] Connexion MongoDB Atlas établie");
         
         // Récupérer tous les messages profil
+        console.log("📊 [ADMIN] Récupération messages profil...");
         const messagesProfilCollection = db.collection('messagesprofils');
         const messagesProfil = await messagesProfilCollection.find({}).sort({ dateCreation: -1 }).limit(100).toArray();
         
@@ -265,38 +279,67 @@ router.get('/admin/tous-messages', requireUser, async (req, res) => {
 // Supprimer un message par l'admin (de n'importe qui)
 router.delete('/admin/supprimer-message/:messageId', requireUser, async (req, res) => {
     const messageId = req.params.messageId;
-    console.log("🛡️ [ADMIN] DÉBUT - Suppression admin d'un message");
-    console.log("🆔 [ADMIN] PARAMÈTRE URL - ID du message à supprimer:", messageId);
-    console.log("👤 [ADMIN] AUTHENTIFICATION - Admin demandeur:", req.userId);
+    console.log("🛡️ [ADMIN] === DÉBUT SUPPRESSION MESSAGE ADMIN ===");
+    console.log("🆔 [ADMIN] ID message cible:", messageId);
+    console.log("👤 [ADMIN] Admin demandeur:", req.userId);
+    console.log("🕐 [ADMIN] Timestamp:", new Date().toISOString());
+    console.log("🌐 [ADMIN] IP client:", req.ip || req.connection.remoteAddress);
     
     try {
         // Vérifier que l'utilisateur est admin
+        console.log("🔍 [ADMIN] Vérification permissions admin...");
         const admin = await Abitante.findById(req.userId);
+        console.log("🔍 [ADMIN] Admin trouvé:", {
+            id: admin?._id,
+            email: admin?.email,
+            role: admin?.role,
+            nom: admin?.nom,
+            prenom: admin?.prenom
+        });
+        
         if (!admin || admin.role !== 'admin') {
-            console.log("❌ [ADMIN] ACCÈS REFUSÉ - Utilisateur non autorisé:", req.userId);
+            console.warn("❌ [ADMIN] ACCÈS REFUSÉ - Utilisateur non autorisé");
+            console.warn("❌ [ADMIN] Rôle requis: 'admin', rôle actuel:", admin?.role);
             return res.status(403).json({ message: "Accès refusé - Droits admin requis" });
         }
         
-        console.log("✅ [ADMIN] AUTORISATION - Admin vérifié:", admin.email);
-        console.log("💾 [ADMIN] BASE DE DONNÉES - Connexion à MongoDB...");
+        console.log("✅ [ADMIN] AUTORISATION ACCORDÉE - Admin vérifié:", admin.email);
+        console.log("💾 [ADMIN] Connexion à MongoDB Atlas...");
         
         const client = await MongoClient.connect(uri);
         const db = client.db(dbName);
         const collection = db.collection('messagesprofils');
+        console.log("✅ [ADMIN] Connexion MongoDB Atlas établie");
         
         // Récupérer le message avant suppression pour les logs
+        console.log("🔍 [ADMIN] Recherche du message à supprimer...");
         const message = await collection.findOne({ _id: messageId });
         if (message) {
-            console.log("📄 [ADMIN] MESSAGE TROUVÉ - Contenu à supprimer:", message.message.substring(0, 50) + "...");
+            console.log("📄 [ADMIN] MESSAGE TROUVÉ:", {
+                id: message._id,
+                auteur: message.auteur,
+                destinataire: message.destinataire,
+                contenu: message.message?.substring(0, 100) + "...",
+                date: message.date
+            });
+        } else {
+            console.warn("⚠️ [ADMIN] MESSAGE NON TROUVÉ:", messageId);
         }
         
         // Supprimer le message
+        console.log("🗑️ [ADMIN] Exécution de la suppression...");
         const result = await collection.deleteOne({ _id: messageId });
+        console.log("📊 [ADMIN] Résultat suppression:", {
+            deletedCount: result.deletedCount,
+            acknowledged: result.acknowledged
+        });
         
         client.close();
+        console.log("🔌 [ADMIN] Connexion MongoDB fermée");
         
         if (result.deletedCount > 0) {
-            console.log("✅ [ADMIN] SUCCÈS - Message supprimé par admin:", messageId);
+            console.log("✅ [ADMIN] === SUPPRESSION MESSAGE RÉUSSIE ===");
+            console.log("✅ [ADMIN] Message supprimé par admin:", admin.email);
             res.json({ message: "Message supprimé par admin" });
         } else {
             console.log("⚠️ [ADMIN] AVERTISSEMENT - Message non trouvé pour suppression:", messageId);

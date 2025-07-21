@@ -26,18 +26,32 @@ function initialiserAdmin() {
     try {
         // Vérifier si l'utilisateur est admin
         const user = JSON.parse(localStorage.getItem('user') || '{}');
+        console.log("🔍 [ADMIN] Vérification utilisateur:", {
+            id: user._id,
+            email: user.email,
+            role: user.role,
+            nom: user.nom,
+            prenom: user.prenom
+        });
+        
         if (!user._id || user.role !== 'admin') {
-            console.log("⚠️ [ADMIN] Utilisateur non autorisé pour l'administration");
+            console.warn("⚠️ [ADMIN] ACCÈS REFUSÉ - Utilisateur non autorisé");
+            console.warn("⚠️ [ADMIN] Rôle requis: 'admin', rôle actuel:", user.role);
             return;
         }
         
+        console.log("✅ [ADMIN] ACCÈS AUTORISÉ - Utilisateur admin confirmé");
+        
         // Configurer les boutons
+        console.log("🔧 [ADMIN] Configuration des boutons admin...");
         configurerBoutonsAdmin();
         
         // Configurer les filtres et recherche
+        console.log("🔧 [ADMIN] Configuration des filtres et recherche...");
         configurerFiltresAdmin();
         
         // Charger les données initiales
+        console.log("📊 [ADMIN] Chargement des données initiales...");
         chargerDonneesAdmin();
         
         console.log("✅ [ADMIN] === INITIALISATION ADMIN TERMINÉE ===");
@@ -451,26 +465,44 @@ async function supprimerMessageAdmin(messageId, auteurNom) {
 // 🗑️ SUPPRESSION UTILISATEUR
 // ========================================
 async function supprimerUtilisateurAdmin(userId, userName) {
-    console.log("🗑️ [ADMIN] Suppression utilisateur:", userId, userName);
+    console.log("🗑️ [ADMIN] === DÉBUT SUPPRESSION UTILISATEUR ===");
+    console.log("🗑️ [ADMIN] ID utilisateur cible:", userId);
+    console.log("🗑️ [ADMIN] Nom utilisateur cible:", userName);
+    console.log("🗑️ [ADMIN] Timestamp:", new Date().toISOString());
     
-    // Confirmation de sécurité
-    const confirmation = confirm(`⚠️ ATTENTION !\n\nÊtes-vous sûr de vouloir supprimer définitivement l'utilisateur :\n\n"${userName}"\n\nCette action est IRRÉVERSIBLE !\n\nTapez "SUPPRIMER" pour confirmer.`);
+    // Vérifier que l'admin ne se supprime pas lui-même
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    console.log("🔍 [ADMIN] Utilisateur admin actuel:", currentUser._id);
     
-    if (!confirmation) {
-        console.log("🚫 [ADMIN] Suppression annulée par l'utilisateur");
+    if (currentUser._id === userId) {
+        console.error("❌ [ADMIN] ERREUR - Tentative d'auto-suppression détectée !");
+        alert("❌ Erreur : Vous ne pouvez pas vous supprimer vous-même !");
         return;
     }
     
+    // Confirmation de sécurité
+    console.log("⚠️ [ADMIN] Demande de confirmation à l'utilisateur...");
+    const confirmation = confirm(`⚠️ ATTENTION !\n\nÊtes-vous sûr de vouloir supprimer définitivement l'utilisateur :\n\n"${userName}"\n\nCette action est IRRÉVERSIBLE !\n\nTapez "SUPPRIMER" pour confirmer.`);
+    
+    if (!confirmation) {
+        console.log("🚫 [ADMIN] Suppression annulée par l'utilisateur (première confirmation)");
+        return;
+    }
+    
+    console.log("⚠️ [ADMIN] Première confirmation OK, demande double confirmation...");
     const doubleConfirmation = prompt(`Pour confirmer la suppression de "${userName}", tapez exactement : SUPPRIMER`);
     
     if (doubleConfirmation !== 'SUPPRIMER') {
         alert('❌ Suppression annulée - confirmation incorrecte');
-        console.log("🚫 [ADMIN] Suppression annulée - confirmation incorrecte");
+        console.log("🚫 [ADMIN] Suppression annulée - confirmation incorrecte:", doubleConfirmation);
         return;
     }
     
+    console.log("✅ [ADMIN] Double confirmation OK, envoi de la requête...");
+    
     try {
         console.log("🔄 [ADMIN] Envoi demande suppression utilisateur...");
+        console.log("🔄 [ADMIN] URL de la requête:", API_CONFIG.url(`/friends/supprimer/${userId}`));
         
         const response = await fetch(API_CONFIG.url(`/friends/supprimer/${userId}`), {
             method: 'DELETE',
@@ -478,6 +510,8 @@ async function supprimerUtilisateurAdmin(userId, userName) {
                 'Content-Type': 'application/json'
             }
         });
+        
+        console.log("📡 [ADMIN] Réponse serveur reçue:", response.status, response.statusText);
         
         if (response.ok) {
             console.log("✅ [ADMIN] Utilisateur supprimé avec succès");
