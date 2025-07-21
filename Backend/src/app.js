@@ -64,50 +64,82 @@ app.get('/debug/database-info', async (req, res) => {
         const Abitante = require('./models/abitante');
         
         // Informations de connexion
-        const dbName = mongoose.connection.name;
+        const db = mongoose.connection.db;
+        const dbName = db.databaseName;
         const connectionState = mongoose.connection.readyState;
         
-        // Compter les documents
-        const totalMembres = await Abitante.countDocuments();
+        // Lister TOUTES les collections
+        const collections = await db.listCollections().toArray();
         
-        // Exemples de membres
-        const exemplesMembres = await Abitante.find({}, {
-            nom: 1,
-            prenom: 1, 
-            pseudonyme: 1,
-            email: 1,
-            role: 1,
-            region: 1,
-            amis: 1,
-            demandesEnvoyees: 1,
-            demandesRecues: 1
-        }).limit(5);
+        const collectionsInfo = {};
         
-        // Statistiques par rôle
-        const statsRoles = await Abitante.aggregate([
-            { $group: { _id: '$role', count: { $sum: 1 } } }
-        ]);
-        
-        // Statistiques par région  
-        const statsRegions = await Abitante.aggregate([
-            { $group: { _id: '$region', count: { $sum: 1 } } }
-        ]);
+        // Examiner chaque collection
+        for (const collection of collections) {
+            const collectionName = collection.name;
+            const count = await db.collection(collectionName).countDocuments();
+            
+            collectionsInfo[collectionName] = {
+                total: count,
+                structure: null,
+                exemples: []
+            };
+            
+            // Afficher un exemple de structure si la collection n'est pas vide
+            if (count > 0) {
+                const sampleDoc = await db.collection(collectionName).findOne();
+                collectionsInfo[collectionName].structure = Object.keys(sampleDoc);
+                
+                // Ajouter quelques exemples selon le type de collection
+                if (collectionName === 'abitanti') {
+                    const exemples = await db.collection(collectionName).find({}, {
+                        nom: 1,
+                        prenom: 1,
+                        pseudonyme: 1,
+                        email: 1,
+                        role: 1,
+                        region: 1,
+                        amis: 1,
+                        demandesEnvoyees: 1,
+                        demandesRecues: 1
+                    }).limit(5).toArray();
+                    collectionsInfo[collectionName].exemples = exemples;
+                    
+                    // Stats pour abitanti
+                    const statsRoles = await db.collection(collectionName).aggregate([
+                        { $group: { _id: '$role', count: { $sum: 1 } } }
+                    ]).toArray();
+                    
+                    const statsRegions = await db.collection(collectionName).aggregate([
+                        { $group: { _id: '$region', count: { $sum: 1 } } }
+                    ]).toArray();
+                    
+                    collectionsInfo[collectionName].statsRoles = statsRoles;
+                    collectionsInfo[collectionName].statsRegions = statsRegions;
+                    
+                } else if (collectionName === 'chatmessages') {
+                    const exemples = await db.collection(collectionName).find({})
+                        .sort({ date: -1 })
+                        .limit(3)
+                        .toArray();
+                    collectionsInfo[collectionName].exemples = exemples;
+                    
+                } else {
+                    // Pour les autres collections, juste quelques exemples
+                    const exemples = await db.collection(collectionName).find({}).limit(3).toArray();
+                    collectionsInfo[collectionName].exemples = exemples;
+                }
+            }
+        }
         
         const info = {
             database: {
                 name: dbName,
                 connectionState: connectionState, // 1 = connected
                 isAtlas: process.env.MONGODB_URI ? process.env.MONGODB_URI.includes('mongodb.net') : false,
-                uri: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'Non défini'
+                uri: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'Non défini',
+                totalCollections: collections.length
             },
-            collections: {
-                abitanti: {
-                    total: totalMembres,
-                    statsRoles,
-                    statsRegions,
-                    exemples: exemplesMembres
-                }
-            },
+            collections: collectionsInfo,
             timestamp: new Date().toISOString()
         };
         

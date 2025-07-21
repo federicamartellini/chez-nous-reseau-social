@@ -10,11 +10,13 @@ async function examinerBaseDeDonnees() {
     try {
         console.log('🔄 Connexion à MongoDB Atlas...');
         
-        // Utiliser la même URI que votre application
-        const MONGODB_URI = process.env.MONGODB_URI;
+        // Pour Atlas, utiliser l'URI de production
+        const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://render-user:RlJiMaIklhFNk84x@cheznous-cluster.y0zjmjr.mongodb.net/cheznous?retryWrites=true&w=majority&appName=cheznous-cluster';
+        
+        console.log('🔗 URI utilisée:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
         
         if (!MONGODB_URI) {
-            console.error('❌ MONGODB_URI non définie dans les variables d\'environnement');
+            console.error('❌ MONGODB_URI non définie');
             return;
         }
         
