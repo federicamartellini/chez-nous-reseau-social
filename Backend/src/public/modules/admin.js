@@ -502,9 +502,12 @@ async function supprimerUtilisateurAdmin(userId, userName) {
     
     try {
         console.log("🔄 [ADMIN] Envoi demande suppression utilisateur...");
-        console.log("🔄 [ADMIN] URL de la requête:", API_CONFIG.url(`/friends/supprimer/${userId}`));
         
-        const response = await fetch(API_CONFIG.url(`/friends/supprimer/${userId}`), {
+        const user = JSON.parse(localStorage.getItem('user'));
+        console.log("🔄 [ADMIN] Admin authentifié:", user._id);
+        console.log("🔄 [ADMIN] URL de la requête:", API_CONFIG.url(`/friends/supprimer/${userId}?userId=${user._id}`));
+        
+        const response = await fetch(API_CONFIG.url(`/friends/supprimer/${userId}?userId=${user._id}`), {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'
