@@ -27,6 +27,7 @@
     <script src="modules/chat.js" defer></script>
     <script src="modules/historique.js" defer></script>
     <script src="modules/liste-membres.js" defer></script>
+    <script src="modules/admin.js" defer></script>
     <script src="debug-chat.js" defer></script> <!-- Script de debug temporaire -->
     <!-- <script src="modules/forms-manager.js" defer></script> --> <!-- Désactivé pour éviter conflit avec AuthManager -->
     <script src="modules/app-init.js" defer></script>
@@ -542,6 +543,100 @@
                     <button id="actualiserMembres" class="btn" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
                         🔄 Actualiser
                     </button>
+                </div>
+            </div>
+            
+            <!-- ========================================
+            🛡️ PANEL ADMINISTRATION
+            ======================================== -->
+            <div class="bento-item admin-panel-section" id="adminPanel" style="display:none;">
+                <h2>🛡️ Panel Administration</h2>
+                <p class="subtitle">Gestion avancée des utilisateurs et contenus</p>
+                
+                <!-- Statistiques admin -->
+                <div class="admin-stats" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #dc3545;">
+                    <h3 style="color: #dc3545; margin-top: 0; margin-bottom: 10px; font-size: 1.1em;">📊 Statistiques</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+                        <div style="text-align: center; padding: 10px; background: white; border-radius: 4px;">
+                            <strong id="adminTotalUsers">-</strong>
+                            <div style="font-size: 0.9em; color: #6c757d;">Utilisateurs</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; background: white; border-radius: 4px;">
+                            <strong id="adminTotalMessages">-</strong>
+                            <div style="font-size: 0.9em; color: #6c757d;">Messages</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; background: white; border-radius: 4px;">
+                            <strong id="adminConnectedUsers">-</strong>
+                            <div style="font-size: 0.9em; color: #6c757d;">En ligne</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gestion des utilisateurs -->
+                <div class="admin-users-section" style="margin-bottom: 20px;">
+                    <h3 style="color: #dc3545; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                        👥 Gestion des utilisateurs
+                        <button id="refreshUsersAdmin" class="btn btn-sm" style="background: #28a745; color: white; padding: 4px 8px; font-size: 0.8em;">
+                            🔄 Actualiser
+                        </button>
+                    </h3>
+                    
+                    <!-- Recherche utilisateur -->
+                    <div style="margin-bottom: 15px;">
+                        <input type="text" id="searchUserAdmin" placeholder="🔍 Rechercher un utilisateur (nom, email, pseudonyme)..." 
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <!-- Liste des utilisateurs -->
+                    <div id="adminUsersList" style="max-height: 300px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 4px; background: white;">
+                        <div class="loading-admin" style="text-align: center; padding: 20px; color: #6c757d;">
+                            📋 Chargement des utilisateurs...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gestion des messages -->
+                <div class="admin-messages-section">
+                    <h3 style="color: #dc3545; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                        💬 Modération des messages
+                        <button id="refreshMessagesAdmin" class="btn btn-sm" style="background: #28a745; color: white; padding: 4px 8px; font-size: 0.8em;">
+                            🔄 Actualiser
+                        </button>
+                    </h3>
+                    
+                    <!-- Filtres messages -->
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <select id="filterMessageType" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">📝 Tous les messages</option>
+                            <option value="profile">👤 Messages profil</option>
+                            <option value="chat">💬 Messages chat</option>
+                        </select>
+                        <input type="text" id="searchMessageAdmin" placeholder="🔍 Rechercher dans les messages..." 
+                               style="flex: 1; min-width: 200px; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <!-- Liste des messages -->
+                    <div id="adminMessagesList" style="max-height: 250px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 4px; background: white;">
+                        <div class="loading-admin" style="text-align: center; padding: 20px; color: #6c757d;">
+                            💬 Chargement des messages...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions admin dangereuses -->
+                <div class="admin-danger-zone" style="margin-top: 25px; padding: 15px; background: #fff5f5; border: 2px solid #fed7d7; border-radius: 8px;">
+                    <h4 style="color: #e53e3e; margin-top: 0; margin-bottom: 10px; font-size: 1em;">⚠️ Zone dangereuse</h4>
+                    <p style="font-size: 0.9em; color: #718096; margin-bottom: 15px;">
+                        Les actions suivantes sont irréversibles. Utilisez avec précaution.
+                    </p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button id="cleanupOldMessages" class="btn" style="background: #ed8936; color: white; padding: 8px 12px; font-size: 0.9em;">
+                            🧹 Nettoyer anciens messages
+                        </button>
+                        <button id="exportUserData" class="btn" style="background: #4299e1; color: white; padding: 8px 12px; font-size: 0.9em;">
+                            📁 Exporter données
+                        </button>
+                    </div>
                 </div>
             </div>
             

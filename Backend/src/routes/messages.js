@@ -208,4 +208,108 @@ router.delete('/profil/:messageId', requireUser, async (req, res) => {
     console.log("🏁 [SERVEUR] FIN - Suppression de message sur profil terminée");
 });
 
+// Récupérer tous les messages pour l'admin
+router.get('/admin/tous-messages', requireUser, async (req, res) => {
+    console.log("🛡️ [ADMIN] DÉBUT - Récupération de tous les messages pour admin");
+    console.log("👤 [ADMIN] AUTHENTIFICATION - Utilisateur demandeur:", req.userId);
+    
+    try {
+        // Vérifier que l'utilisateur est admin
+        const admin = await Abitante.findById(req.userId);
+        if (!admin || admin.role !== 'admin') {
+            console.log("❌ [ADMIN] ACCÈS REFUSÉ - Utilisateur non autorisé:", req.userId);
+            return res.status(403).json({ message: "Accès refusé - Droits admin requis" });
+        }
+        
+        console.log("✅ [ADMIN] AUTORISATION - Admin vérifié:", admin.email);
+        console.log("💾 [ADMIN] BASE DE DONNÉES - Connexion à MongoDB...");
+        
+        const client = await MongoClient.connect(uri);
+        const db = client.db(dbName);
+        
+        // Récupérer tous les messages profil
+        const messagesProfilCollection = db.collection('messagesprofils');
+        const messagesProfil = await messagesProfilCollection.find({}).sort({ dateCreation: -1 }).limit(100).toArray();
+        
+        console.log("📊 [ADMIN] RÉSULTATS - Messages profil trouvés:", messagesProfil.length);
+        
+        // Enrichir avec les informations des utilisateurs
+        const messagesEnrichis = await Promise.all(messagesProfil.map(async (msg) => {
+            const auteur = await Abitante.findById(msg.auteurId);
+            const destinataire = await Abitante.findById(msg.profilAmiId);
+            
+            return {
+                _id: msg._id,
+                message: msg.message,
+                dateCreation: msg.dateCreation,
+                type: 'profil',
+                auteur: auteur ? `${auteur.nom} ${auteur.prenom} (${auteur.email})` : 'Utilisateur supprimé',
+                destinataire: destinataire ? `${destinataire.nom} ${destinataire.prenom} (${destinataire.email})` : 'Utilisateur supprimé'
+            };
+        }));
+        
+        client.close();
+        
+        console.log("✅ [ADMIN] SUCCÈS - Messages enrichis préparés:", messagesEnrichis.length);
+        res.json(messagesEnrichis);
+        
+    } catch (err) {
+        console.error("💥 [ADMIN] ERREUR CRITIQUE - Échec récupération messages admin:", err.message);
+        console.error("📍 [ADMIN] DIAGNOSTIC ERREUR - Stack trace complète:", err.stack);
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+    
+    console.log("🏁 [ADMIN] FIN - Récupération messages admin terminée");
+});
+
+// Supprimer un message par l'admin (de n'importe qui)
+router.delete('/admin/supprimer-message/:messageId', requireUser, async (req, res) => {
+    const messageId = req.params.messageId;
+    console.log("🛡️ [ADMIN] DÉBUT - Suppression admin d'un message");
+    console.log("🆔 [ADMIN] PARAMÈTRE URL - ID du message à supprimer:", messageId);
+    console.log("👤 [ADMIN] AUTHENTIFICATION - Admin demandeur:", req.userId);
+    
+    try {
+        // Vérifier que l'utilisateur est admin
+        const admin = await Abitante.findById(req.userId);
+        if (!admin || admin.role !== 'admin') {
+            console.log("❌ [ADMIN] ACCÈS REFUSÉ - Utilisateur non autorisé:", req.userId);
+            return res.status(403).json({ message: "Accès refusé - Droits admin requis" });
+        }
+        
+        console.log("✅ [ADMIN] AUTORISATION - Admin vérifié:", admin.email);
+        console.log("💾 [ADMIN] BASE DE DONNÉES - Connexion à MongoDB...");
+        
+        const client = await MongoClient.connect(uri);
+        const db = client.db(dbName);
+        const collection = db.collection('messagesprofils');
+        
+        // Récupérer le message avant suppression pour les logs
+        const message = await collection.findOne({ _id: messageId });
+        if (message) {
+            console.log("📄 [ADMIN] MESSAGE TROUVÉ - Contenu à supprimer:", message.message.substring(0, 50) + "...");
+        }
+        
+        // Supprimer le message
+        const result = await collection.deleteOne({ _id: messageId });
+        
+        client.close();
+        
+        if (result.deletedCount > 0) {
+            console.log("✅ [ADMIN] SUCCÈS - Message supprimé par admin:", messageId);
+            res.json({ message: "Message supprimé par admin" });
+        } else {
+            console.log("⚠️ [ADMIN] AVERTISSEMENT - Message non trouvé pour suppression:", messageId);
+            res.status(404).json({ message: "Message non trouvé" });
+        }
+        
+    } catch (err) {
+        console.error("💥 [ADMIN] ERREUR CRITIQUE - Échec suppression admin:", err.message);
+        console.error("📍 [ADMIN] DIAGNOSTIC ERREUR - Stack trace complète:", err.stack);
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+    
+    console.log("🏁 [ADMIN] FIN - Suppression admin de message terminée");
+});
+
 module.exports = router;

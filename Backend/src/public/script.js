@@ -728,7 +728,19 @@ const AuthManager = {
             
             // Panneau admin si nécessaire (avec vérification d'existence)
             const adminPanel = document.getElementById('adminPanel');
-            if (adminPanel) adminPanel.style.display = user.role === 'admin' ? 'block' : 'none';
+            if (adminPanel) {
+                if (user.role === 'admin') {
+                    adminPanel.style.display = 'block';
+                    // Initialiser le module admin si disponible
+                    if (window.AdminModule && typeof window.AdminModule.initialiser === 'function') {
+                        setTimeout(() => {
+                            window.AdminModule.initialiser();
+                        }, 500); // Délai pour s'assurer que le DOM est prêt
+                    }
+                } else {
+                    adminPanel.style.display = 'none';
+                }
+            }
             
             console.log('✅ [AUTH] Interface utilisateur mise à jour pour:', user.pseudonyme || user.nom);
         } else {
