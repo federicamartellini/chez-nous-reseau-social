@@ -18,7 +18,7 @@ function initialiserTransporteur() {
     
     try {
         // Configuration simple avec Gmail (ou autre service)
-        transporter = nodemailer.createTransporter({
+        transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
                 user: process.env.EMAIL_USER || 'cheznous.reseau@gmail.com',
