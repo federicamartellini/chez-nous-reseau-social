@@ -16,6 +16,7 @@
 - **Messages privés dans la page profil personnelle** : Communication personnelle 
 - **Messages dans la page profil entre amis** : Discussions communautaires
 - **Notifications du chat** : Alertes en temps réel pour les nouveaux messages du chat
+- **🔔 Notifications visuelles avancées** : Badges compteurs avec clignotements pour messages non lus
 
 ### 👥 Gestion des Relations
 - **Système d'amis** : Ajout et gestion des contacts des membres 
@@ -160,7 +161,8 @@ cheznous/
 
 6. **Accéder à l'application**
 
-   Ouvrez votre navigateur et rendez-vous sur : `http://localhost:5000`
+   **🌍 En Production** : `https://chez-nous-reseau-social.onrender.com`  
+   **🖥️ En Développement** : `http://localhost:5000`
 
 ### ⚡ Démarrage rapide avec VS Code
 
@@ -188,29 +190,58 @@ Le projet inclut une tâche VS Code pour démarrer rapidement le serveur :
 
 ## 🌐 API Endpoints
 
+> **🌍 URL de Production** : `https://chez-nous-reseau-social.onrender.com`  
+> **🖥️ URL de Développement** : `http://localhost:5000`
+
 ### Authentification
-- `POST /users/register` - Inscription d'un nouvel utilisateur
-- `POST /users/login` - Connexion utilisateur
-- `GET /users/profile` - Récupération du profil
+- `POST https://chez-nous-reseau-social.onrender.com/users/register` - Inscription d'un nouvel utilisateur
+- `POST https://chez-nous-reseau-social.onrender.com/users/login` - Connexion utilisateur
+- `GET https://chez-nous-reseau-social.onrender.com/users/profile` - Récupération du profil utilisateur
 
-### Messages
-- `GET /messages` - Récupération des messages
-- `POST /messages` - Envoi d'un nouveau message
-- `GET /api/messagespersonnels` - Messages personnels
-- `GET /api/messagesprives` - Messages privés
+### Messages sur Profils
+- `POST https://chez-nous-reseau-social.onrender.com/messages/profil-ami` - Publier un message sur le profil d'un ami
+- `GET https://chez-nous-reseau-social.onrender.com/messages/profil/:profilId` - Récupérer les messages d'un profil
+- `DELETE https://chez-nous-reseau-social.onrender.com/messages/profil/:messageId` - Supprimer un message de profil
+- `GET https://chez-nous-reseau-social.onrender.com/messages/admin/tous-messages` - [Admin] Récupérer tous les messages
+- `DELETE https://chez-nous-reseau-social.onrender.com/messages/admin/supprimer-message/:messageId` - [Admin] Supprimer un message
 
-### Chat
-- `GET /chat` - Interface de chat
-- Socket events : `message`, `user-connected`, `user-disconnected`
+### Messages Personnels  
+- `GET https://chez-nous-reseau-social.onrender.com/api/messagespersonnels` - Messages personnels du profil utilisateur
+- `GET https://chez-nous-reseau-social.onrender.com/api/messagesprives` - Messages privés entre utilisateurs
 
-### Amis
-- `GET /friends` - Liste des amis
-- `POST /friends/add` - Ajouter un ami
-- `DELETE /friends/remove` - Supprimer un ami
+### Chat en Temps Réel
+- `GET https://chez-nous-reseau-social.onrender.com/api/chat/` - Interface de chat
+- `POST https://chez-nous-reseau-social.onrender.com/api/chat/envoyer` - Envoyer un message chat avec notifications
+- `GET https://chez-nous-reseau-social.onrender.com/api/chat/messages` - Récupérer tous les messages chat
+- `GET https://chez-nous-reseau-social.onrender.com/api/chat/messages/:userId/:amiId` - Conversation entre deux utilisateurs
+- `GET https://chez-nous-reseau-social.onrender.com/api/chat/messages-non-lus/:userId` - Messages non lus pour un utilisateur
+- `POST https://chez-nous-reseau-social.onrender.com/api/chat/marquer-comme-lus` - Marquer des messages comme lus
+
+### Gestion des Amis
+- `GET https://chez-nous-reseau-social.onrender.com/friends/membres` - Liste de tous les membres (sauf soi-même)
+- `GET https://chez-nous-reseau-social.onrender.com/friends/amis` - Liste des amis confirmés
+- `GET https://chez-nous-reseau-social.onrender.com/friends/demandes-envoyees` - Demandes d'amitié envoyées
+- `GET https://chez-nous-reseau-social.onrender.com/friends/demandes-recues` - Demandes d'amitié reçues
+- `POST https://chez-nous-reseau-social.onrender.com/friends/demander` - Envoyer une demande d'amitié
+- `POST https://chez-nous-reseau-social.onrender.com/friends/accepter` - Accepter une demande d'amitié
+- `DELETE https://chez-nous-reseau-social.onrender.com/friends/supprimer/:id` - Supprimer un ami
+
+### Logs et Monitoring
+- `POST https://chez-nous-reseau-social.onrender.com/api/log` - Enregistrer les actions côté client
+
+### Socket.IO Events (temps réel)
+- **URL Socket** : `https://chez-nous-reseau-social.onrender.com`
+- **Connexion** : `connection` - Nouvelle connexion utilisateur
+- **Enregistrement** : `register user` - Enregistrer un utilisateur connecté
+- **Messages chat** : `message` - Recevoir/envoyer des messages
+- **Statuts** : `user-connected`, `user-disconnected` - États de connexion
+- **Notifications** : `nouveau-message-chat` - Notification de nouveau message
 
 ## 🔧 Configuration Avancée
 
 ### Variables d'Environnement
+
+**🖥️ Développement Local :**
 ```env
 # Serveur
 PORT=5000
@@ -226,6 +257,24 @@ SESSION_SECRET=your_session_secret
 
 # CORS
 CORS_ORIGIN=http://localhost:5000
+```
+
+**🌍 Production (Render) :**
+```env
+# Serveur
+PORT=10000
+NODE_ENV=production
+
+# Base de données (MongoDB Atlas)
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/france
+DB_NAME=france
+
+# Sécurité
+JWT_SECRET=production_jwt_secret_key
+SESSION_SECRET=production_session_secret
+
+# CORS
+CORS_ORIGIN=https://chez-nous-reseau-social.onrender.com
 ```
 
 ### Configuration MongoDB
