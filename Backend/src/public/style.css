@@ -434,6 +434,19 @@ legend {
     background: linear-gradient(135deg, var(--warning-orange) 0%, #e65100 100%);
 }
 
+/* Style spécial pour bouton ami confirmé */
+.cta-ami {
+    background: #28a745 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    cursor: default !important;
+    opacity: 1 !important;
+}
+
 /* Groupes de boutons */
 .btn-group {
     display: flex;

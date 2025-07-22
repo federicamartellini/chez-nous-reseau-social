@@ -180,7 +180,7 @@ const ListeMembresModule = {
                     border-radius: 4px; 
                     font-size: 12px; 
                     cursor: default;
-                    opacity: 0.8;
+                    opacity: 1;
                 " 
                 disabled
                 title="Vous êtes déjà amis">
