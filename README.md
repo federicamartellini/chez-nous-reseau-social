@@ -142,8 +142,8 @@ cheznous/
    Créer un fichier `.env` dans le dossier `Backend/` :
 
    ```env
-   PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/france
+   PORT=***
+   MONGODB_URI=mongodb://<username>:<password>@localhost:27017/<dbname>
    NODE_ENV=development
    ```
 
@@ -244,16 +244,16 @@ Le projet inclut une tâche VS Code pour démarrer rapidement le serveur :
 **🖥️ Développement Local :**
 ```env
 # Serveur
-PORT=5000
+PORT=***
 HOST=localhost
 
 # Base de données
-MONGODB_URI=mongodb://localhost:27017/france
-DB_NAME=france
+MONGODB_URI=mongodb://<username>:<password>@localhost:27017/<dbname>
+DB_NAME=***
 
 # Sécurité
-JWT_SECRET=your_jwt_secret_key
-SESSION_SECRET=your_session_secret
+JWT_SECRET=***
+SESSION_SECRET=***
 
 # CORS
 CORS_ORIGIN=http://localhost:5000
@@ -262,16 +262,16 @@ CORS_ORIGIN=http://localhost:5000
 **🌍 Production (Render) :**
 ```env
 # Serveur
-PORT=10000
+PORT=***
 NODE_ENV=production
 
 # Base de données (MongoDB Atlas)
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/france
-DB_NAME=france
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/<dbname>
+DB_NAME=***
 
 # Sécurité
-JWT_SECRET=production_jwt_secret_key
-SESSION_SECRET=production_session_secret
+JWT_SECRET=***
+SESSION_SECRET=***
 
 # CORS
 CORS_ORIGIN=https://chez-nous-reseau-social.onrender.com
